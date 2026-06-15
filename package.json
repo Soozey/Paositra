@@ -1,0 +1,36 @@
+{
+  "name": "paositra-management-suite",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:api": "npm run dev -w @paositra/api",
+    "dev:treasury": "npm run dev -w @paositra/treasury-web",
+    "dev:operations": "npm run dev -w @paositra/operations-web",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:bootstrap-admin": "npm run bootstrap-admin -w @paositra/api"
+  },
+  "dependencies": {
+    "pg": "8.16.0"
+  },
+  "overrides": {
+    "@nestjs/common": "11.1.26",
+    "@nestjs/core": "11.1.26",
+    "@nestjs/platform-express": "11.1.26",
+    "tsx": "4.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.32",
+    "tsx": "4.22.4",
+    "typescript": "5.8.3"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

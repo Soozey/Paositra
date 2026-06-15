@@ -1,0 +1,40 @@
+{
+  "name": "@paositra/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "bootstrap-admin": "node dist/scripts/bootstrap-admin.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.26",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.1.26",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.1.26",
+    "@nestjs/swagger": "11.4.4",
+    "@nestjs/typeorm": "11.0.1",
+    "bcryptjs": "3.0.2",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.14.2",
+    "helmet": "8.1.0",
+    "pg": "8.16.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "typeorm": "0.3.30",
+    "zod": "3.25.67"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "11.1.26",
+    "@types/jest": "29.5.14",
+    "@types/express": "5.0.3",
+    "@types/node": "22.15.32",
+    "jest": "29.7.0",
+    "ts-jest": "29.2.5",
+    "typescript": "5.8.3"
+  }
+}

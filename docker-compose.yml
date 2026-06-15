@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16.9-alpine
+    environment:
+      POSTGRES_DB: paositra
+      POSTGRES_USER: paositra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - paositra_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paositra -d paositra"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://paositra:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/paositra
+      DATABASE_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-900}
+      SESSION_IDLE_TIMEOUT_SECONDS: ${SESSION_IDLE_TIMEOUT_SECONDS:-900}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://localhost:8081}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-268435456}
+      UPLOAD_ROOT: /data/uploads
+    ports:
+      - "3000:3000"
+    volumes:
+      - paositra_uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  treasury-web:
+    build:
+      context: .
+      dockerfile: apps/treasury-web/Dockerfile
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL:-http://localhost:3000}
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  operations-web:
+    build:
+      context: .
+      dockerfile: apps/operations-web/Dockerfile
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL:-http://localhost:3000}
+    ports:
+      - "8081:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  paositra_postgres:
+  paositra_uploads:
