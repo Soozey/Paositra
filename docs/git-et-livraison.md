@@ -5,7 +5,7 @@
 - Dossier local autorisé : `C:\Users\Laptop\Documents\PAOSITRA`
 - Dépôt GitHub : `https://github.com/Soozey/Paositra`
 - Dépôt parent `C:\Users\Laptop` : exclu de cette livraison
-- Branche prévue : `main`, le dépôt distant étant vide au contrôle initial
+- Branche utilisée : `main`, le dépôt distant étant vide au contrôle initial
 - Force push : interdit
 
 ## Fichiers exclus
@@ -36,8 +36,9 @@ git push -u origin main
 ## Statut
 
 - Initialisation du dépôt local : réalisée dans le dossier autorisé
-- Commit : à faire
-- Push : à faire
+- Commit de base : `d852ca3` (`chore: initialize Paositra DAO-compliant project baseline`)
+- Push initial : réussi sur `origin/main`
+- GitHub CLI : indisponible; publication effectuée avec Git HTTPS et le gestionnaire d'identifiants configuré
 - Développement métier après push : interdit avant validation humaine
 
 ## Résultats avant commit
