@@ -17,9 +17,9 @@ if (-not $containerId) {
 
 $containerBackup = "/tmp/paositra-$timestamp.dump"
 docker compose -f $composeFile exec -T postgres `
-  pg_dump -U paositra -d paositra -Fc -f $containerBackup
+  sh -c "PGPASSWORD=`"`$PAOSITRA_OWNER_PASSWORD`" pg_dump -U paositra_owner -d paositra -Fc -f $containerBackup"
 docker cp "${containerId}:$containerBackup" $databaseFile
 docker compose -f $composeFile exec -T postgres rm -f $containerBackup
 
 Write-Output "Database backup created: $databaseFile"
-Write-Output "The persistent upload volume must be backed up by the infrastructure storage snapshot mechanism."
+Write-Output "The persistent upload volume requires a separate infrastructure snapshot; this script does not copy it."

@@ -27,7 +27,10 @@ interface AuthState {
   user: CurrentUser | null;
   setSession: (token: string, user: CurrentUser) => void;
   clearSession: () => void;
-  hasPermission: (permission: string) => boolean;
+  hasPermission: (
+    permission: string,
+    scope?: { type: Exclude<string, "global">; id: string }
+  ) => boolean;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -98,11 +101,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setToken(null);
         setUser(null);
       },
-      hasPermission: (permission) =>
+      hasPermission: (permission, scope) =>
         Boolean(
           user?.permissions.some(
             (entry) =>
-              entry.code === permission && entry.scopeType === "global"
+              entry.code === permission &&
+              ((entry.scopeType === "global" && entry.scopeId === null) ||
+                (scope &&
+                  entry.scopeType === scope.type &&
+                  entry.scopeId === scope.id))
           )
         )
     }),

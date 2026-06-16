@@ -28,6 +28,18 @@ interface Agency {
   version: number;
 }
 
+interface DemoScreen {
+  id: string;
+  label: string;
+  title: string;
+  dao: string;
+  status: "visible" | "partiel" | "vide" | "bloqué";
+  api: string;
+  missing: string;
+}
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+
 const emptyAgency = {
   code: "",
   name: "",
@@ -39,6 +51,234 @@ const emptyAgency = {
   managerManagementStartDate: ""
 };
 
+const demoScreens: DemoScreen[] = [
+  {
+    id: "dashboard",
+    label: "Tableau de bord",
+    title: "Tableau de bord Opérations",
+    dao: "Vue d'ensemble, consolidation, anomalies, mises à disposition et documents mensuels",
+    status: "vide",
+    api: "Agrégats réels à définir",
+    missing: "Modèles, seuils, calculs et données validées"
+  },
+  {
+    id: "my-agency",
+    label: "Mon agence",
+    title: "Mon agence",
+    dao: "Gestion des opérations dans une agence",
+    status: "vide",
+    api: "/api/v1/operations/agencies",
+    missing: "Rattachement utilisateur/agence et profils"
+  },
+  {
+    id: "day-situation",
+    label: "Situation du jour",
+    title: "Situation du jour",
+    dao: "Situation comptable et encaisses d'une agence",
+    status: "bloqué",
+    api: "À définir",
+    missing: "Règles comptables, journée et caisse"
+  },
+  {
+    id: "agency-wallet",
+    label: "Portefeuille agence",
+    title: "Gestion portefeuille agence",
+    dao: "Initialisation portefeuille, report numéraire, ME, encaisses et stock VP",
+    status: "vide",
+    api: "À définir",
+    missing: "Règles de portefeuille, valeurs postales et référentiels"
+  },
+  {
+    id: "open-agency",
+    label: "Ouverture agence",
+    title: "Ouverture agence",
+    dao: "Ouverture agence et paramétrage max autorisé, numéraire, VP, ME, codique, zone et rattachement",
+    status: "partiel",
+    api: "/api/v1/operations/agencies",
+    missing: "Codique, profils et référentiels validés"
+  },
+  {
+    id: "close-agency",
+    label: "Fermeture agence",
+    title: "Fermeture agence",
+    dao: "Fermeture agence, transfert des valeurs, rapatriement ou réintégration",
+    status: "partiel",
+    api: "/api/v1/operations/agencies/:id/close",
+    missing: "Séquence métier et habilitations"
+  },
+  {
+    id: "management-cut",
+    label: "Coupure de gestion",
+    title: "Coupure de gestion",
+    dao: "Coupure de gestion",
+    status: "vide",
+    api: "À définir",
+    missing: "Définition opérationnelle de la coupure"
+  },
+  {
+    id: "inter-agencies",
+    label: "Inter-agences",
+    title: "Opérations inter-agences",
+    dao: "Opérations entre agences, historiques et notifications",
+    status: "vide",
+    api: "À définir",
+    missing: "Règles de transfert et validation"
+  },
+  {
+    id: "fund-requests",
+    label: "Demandes de valeurs",
+    title: "Demande de fonds / demande de valeurs",
+    dao: "Demandes de valeurs, notifications et versements/rapatriements",
+    status: "vide",
+    api: "À définir",
+    missing: "Seuils, destinataires et autorisations"
+  },
+  {
+    id: "remittances",
+    label: "Versements",
+    title: "Versements / rapatriements",
+    dao: "Versements, rapatriements et réintégration",
+    status: "vide",
+    api: "À définir",
+    missing: "Règles comptables et justificatifs"
+  },
+  {
+    id: "attachments",
+    label: "Pièces justificatives",
+    title: "Pièces justificatives",
+    dao: "Téléversement images pièces justificatives G59-G60",
+    status: "vide",
+    api: "À définir",
+    missing: "Formats, conservation, contrôle et sécurité fichier"
+  },
+  {
+    id: "counters",
+    label: "Guichets et caisses",
+    title: "Guichets et caisses",
+    dao: "300 agences, 1500 caisses et opérations effectuées à la caisse",
+    status: "vide",
+    api: "À définir",
+    missing: "Référentiel caisses et règles de guichet"
+  },
+  {
+    id: "open-cashdesk",
+    label: "Ouverture caisse",
+    title: "Ouverture de caisse",
+    dao: "Opérations effectuées à la caisse et encaisse",
+    status: "bloqué",
+    api: "À définir",
+    missing: "Procédure d'ouverture et règles de numéraire"
+  },
+  {
+    id: "cash-operations",
+    label: "Opérations caisse",
+    title: "Opérations caisse",
+    dao: "Registre recettes/dépenses, tickets, levées et situation des envois",
+    status: "bloqué",
+    api: "À définir",
+    missing: "Produits, services, règles comptables et privilèges"
+  },
+  {
+    id: "close-cashdesk",
+    label: "Fermeture caisse",
+    title: "Fermeture de caisse",
+    dao: "Validation journée et opérations non modifiables après validation",
+    status: "bloqué",
+    api: "À définir",
+    missing: "Règles de fermeture et délégations"
+  },
+  {
+    id: "daily-validation",
+    label: "Validation journalière",
+    title: "Validation journalière",
+    dao: "Validation journée uniquement par Chef d'Agence",
+    status: "bloqué",
+    api: "À définir",
+    missing: "Profil exact Chef d'Agence et suppléance"
+  },
+  {
+    id: "verification",
+    label: "Vérification",
+    title: "Vérification",
+    dao: "Résultat de vérification au fur et à mesure, déficit ou excédent",
+    status: "vide",
+    api: "À définir",
+    missing: "Traitement des écarts et responsabilités"
+  },
+  {
+    id: "credit-ack",
+    label: "Accusés de crédit",
+    title: "Accusés de crédit",
+    dao: "Accusé de crédit",
+    status: "vide",
+    api: "À définir",
+    missing: "Modèle officiel et workflow"
+  },
+  {
+    id: "fund-availability",
+    label: "Mise à disposition",
+    title: "Mise à disposition de fonds",
+    dao: "Mise à disposition de fonds",
+    status: "vide",
+    api: "À définir",
+    missing: "Autorisations et règles comptables"
+  },
+  {
+    id: "reporting",
+    label: "Reporting",
+    title: "Reporting",
+    dao: "Exports CSV/Excel/PDF, CA, produit/région, performance et anomalies",
+    status: "vide",
+    api: "À définir",
+    missing: "Données réelles, modèles, seuils et calculs"
+  },
+  {
+    id: "products",
+    label: "Produits & services",
+    title: "Produits & services",
+    dao: "Nouveaux produits/services et retrait sans suppression en base",
+    status: "vide",
+    api: "À définir",
+    missing: "Référentiel, tarifs et modes de comptabilisation"
+  },
+  {
+    id: "postal-values",
+    label: "Valeurs postales",
+    title: "Valeurs postales",
+    dao: "Valeurs postales et activation types VP",
+    status: "vide",
+    api: "À définir",
+    missing: "Types VP et règles de stock"
+  },
+  {
+    id: "settings",
+    label: "Paramètres",
+    title: "Paramètres",
+    dao: "Agences, pièces, registres, articles, règles comptables, calendriers",
+    status: "vide",
+    api: "À définir",
+    missing: "Référentiels validés"
+  },
+  {
+    id: "users",
+    label: "Utilisateurs",
+    title: "Utilisateurs / profils / habilitations",
+    dao: "Utilisateurs, profils, rattachements et habilitations",
+    status: "bloqué",
+    api: "/api/v1/platform/users",
+    missing: "Matrice contractuelle des rôles et périmètres"
+  },
+  {
+    id: "audit",
+    label: "Audit",
+    title: "Audit",
+    dao: "Piste d'audit complète et inaltérable",
+    status: "partiel",
+    api: "/api/v1/platform/audit-events",
+    missing: "Écran d'administration et droits finaux"
+  }
+];
+
 export function App() {
   const auth = useAuth();
   if (!auth.token || !auth.user) {
@@ -49,8 +289,88 @@ export function App() {
   }
   return (
     <AppShell title="Gestion des opérations">
-      <AgenciesWorkspace />
+      {DEMO_MODE ? <OperationsDemoWorkspace /> : <AgenciesWorkspace />}
     </AppShell>
+  );
+}
+
+function OperationsDemoWorkspace() {
+  const firstScreen = demoScreens[0]!;
+  const [activeId, setActiveId] = useState(firstScreen.id);
+  const active = demoScreens.find((screen) => screen.id === activeId) ?? firstScreen;
+
+  return (
+    <>
+      <div className="demo-banner">DÉMONSTRATION PROVISOIRE — NON CONTRACTUELLE</div>
+      <div className="presentation-layout">
+        <nav className="side-menu" aria-label="Écrans de démonstration Opérations">
+          {demoScreens.map((screen) => (
+            <button
+              className={screen.id === active.id ? "active" : ""}
+              key={screen.id}
+              onClick={() => setActiveId(screen.id)}
+              type="button"
+            >
+              {screen.label}
+            </button>
+          ))}
+        </nav>
+        <section className="demo-main">
+          <p className="breadcrumb">Lot 2 / Opérations / {active.label}</p>
+          <div className="panel">
+            <div className="demo-title">
+              <div>
+                <p className="eyebrow">PAOSITRA MALAGASY</p>
+                <h2>{active.title}</h2>
+                <p className="muted">{active.dao}</p>
+              </div>
+              <span className={`badge ${active.status === "bloqué" ? "warning" : ""}`}>
+                {active.status}
+              </span>
+            </div>
+            <Message type="info">
+              Aucune donnée réelle disponible pour cette démonstration. Aucun
+              chiffre d'affaires, stock VP, déficit, excédent ou mouvement de
+              caisse n'est simulé.
+            </Message>
+            <div className="kpi-grid">
+              <div className="kpi-card">
+                <span>Données réelles chargées</span>
+                <strong>0</strong>
+                <small>Démo sans données métier</small>
+              </div>
+              <div className="kpi-card">
+                <span>Actions activées</span>
+                <strong>—</strong>
+                <small>Après validation Paositra</small>
+              </div>
+              <div className="kpi-card">
+                <span>Règles métier</span>
+                <strong>—</strong>
+                <small>À clarifier</small>
+              </div>
+            </div>
+            <div className="empty-state">
+              <strong>État vide réel</strong>
+              <span>Aucun enregistrement réel n'est présent pour cet écran.</span>
+              <span>API prévue : {active.api}</span>
+              <span>Blocage : {active.missing}</span>
+            </div>
+            <div className="demo-actions">
+              <button className="primary" disabled title="Action à activer après validation des règles métier par Paositra" type="button">
+                Nouvelle action
+              </button>
+              <button className="disabled-action" disabled title="Export désactivé en mode démonstration" type="button">
+                Export désactivé
+              </button>
+              <button className="secondary" disabled title="Workflow non validé contractuellement" type="button">
+                Valider après clarification
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 
@@ -181,7 +501,10 @@ function AgenciesWorkspace() {
                       <td>{agency.zone || "Non renseignée"}</td>
                       <td>{agency.status === "open" ? "Ouverte" : "Fermée"}</td>
                       <td>
-                        {agency.status === "open" && auth.hasPermission("operations:agencies:close") && (
+                        {agency.status === "open" && auth.hasPermission(
+                          "operations:agencies:close",
+                          { type: "agency", id: agency.id }
+                        ) && (
                           <button className="danger" onClick={() => void closeAgency(agency)} type="button">
                             Fermer
                           </button>

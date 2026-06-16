@@ -182,16 +182,22 @@ export class IdempotencyKey {
   requestHash!: string;
 
   @Column({ length: 20 })
-  state!: "processing" | "completed";
+  state!: "processing" | "completed" | "failed" | "expired";
 
   @Column({ name: "response_status", type: "integer", nullable: true })
   responseStatus!: number | null;
 
   @Column({ name: "response_body", type: "jsonb", nullable: true })
-  responseBody!: unknown;
+  responseBody!: unknown | null;
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
+
+  @UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
+  updatedAt!: Date;
+
+  @Column({ name: "failed_at", type: "timestamptz", nullable: true })
+  failedAt!: Date | null;
 
   @Column({ name: "expires_at", type: "timestamptz" })
   expiresAt!: Date;

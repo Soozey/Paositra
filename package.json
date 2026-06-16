@@ -9,12 +9,15 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:integration": "node scripts/run-postgres-integration.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:api": "npm run dev -w @paositra/api",
     "dev:treasury": "npm run dev -w @paositra/treasury-web",
     "dev:operations": "npm run dev -w @paositra/operations-web",
     "db:migrate": "node scripts/migrate.mjs",
-    "db:bootstrap-admin": "npm run bootstrap-admin -w @paositra/api"
+    "db:bootstrap-admin": "npm run bootstrap-admin -w @paositra/api",
+    "openapi:generate": "npm run build -w @paositra/api && node apps/api/dist/scripts/generate-openapi.js",
+    "openapi:check": "node scripts/check-openapi.mjs"
   },
   "dependencies": {
     "pg": "8.16.0"
@@ -28,7 +31,8 @@
   "devDependencies": {
     "@types/node": "22.15.32",
     "tsx": "4.22.4",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "vitest": "^4.1.8"
   },
   "engines": {
     "node": ">=20.19"

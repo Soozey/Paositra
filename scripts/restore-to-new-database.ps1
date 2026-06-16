@@ -16,7 +16,7 @@ if (-not $containerId) {
 }
 
 $exists = docker compose -f $composeFile exec -T postgres `
-  psql -U paositra -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$TargetDatabase'"
+  sh -c "PGPASSWORD=`"`$POSTGRES_PASSWORD`" psql -U postgres -d postgres -tAc `"SELECT 1 FROM pg_database WHERE datname='$TargetDatabase'`""
 if (($exists -join "").Trim() -eq "1") {
   throw "Target database already exists. Refusing to overwrite it."
 }
@@ -24,9 +24,9 @@ if (($exists -join "").Trim() -eq "1") {
 $containerBackup = "/tmp/restore-source.dump"
 docker cp $resolvedBackup "${containerId}:$containerBackup"
 docker compose -f $composeFile exec -T postgres `
-  createdb -U paositra $TargetDatabase
+  sh -c "PGPASSWORD=`"`$POSTGRES_PASSWORD`" createdb -U postgres -O paositra_owner $TargetDatabase"
 docker compose -f $composeFile exec -T postgres `
-  pg_restore -U paositra -d $TargetDatabase --exit-on-error $containerBackup
+  sh -c "PGPASSWORD=`"`$PAOSITRA_OWNER_PASSWORD`" pg_restore -U paositra_owner -d $TargetDatabase --exit-on-error $containerBackup"
 docker compose -f $composeFile exec -T postgres rm -f $containerBackup
 
 Write-Output "Backup restored to the separate database: $TargetDatabase"

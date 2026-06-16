@@ -1,7 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "../common/api-docs.decorators";
 import {
-  ArrayUnique,
-  IsArray,
   IsBoolean,
   IsEmail,
   IsOptional,
@@ -32,9 +30,4 @@ export class CreateUserDto {
   @IsBoolean()
   mustChangePassword = true;
 
-  @ApiProperty({ type: [String] })
-  @IsArray()
-  @ArrayUnique()
-  @IsString({ each: true })
-  permissionCodes!: string[];
 }

@@ -3,7 +3,6 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import {
   AuditEvent,
   IdempotencyKey,
-  Permission,
   User
 } from "../database/entities";
 import { AuditService } from "./audit.service";
@@ -19,8 +18,7 @@ import { UsersService } from "./users.service";
     TypeOrmModule.forFeature([
       AuditEvent,
       IdempotencyKey,
-      User,
-      Permission
+      User
     ])
   ],
   controllers: [UsersController, AuditController],

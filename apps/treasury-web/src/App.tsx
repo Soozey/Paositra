@@ -36,6 +36,18 @@ interface Placement {
   version: number;
 }
 
+interface DemoScreen {
+  id: string;
+  label: string;
+  title: string;
+  dao: string;
+  status: "visible" | "partiel" | "vide" | "bloqué";
+  api: string;
+  missing: string;
+}
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+
 const emptyPlacement = {
   institutionId: "",
   principalAmount: "",
@@ -47,6 +59,189 @@ const emptyPlacement = {
   startDate: ""
 };
 
+const demoScreens: DemoScreen[] = [
+  {
+    id: "dashboard",
+    label: "Tableau de bord",
+    title: "Tableau de bord Trésorerie",
+    dao: "Reporting, soldes, crédits, dossiers et délais explicitement listés",
+    status: "vide",
+    api: "Agrégats réels à définir",
+    missing: "Modèles, règles de calcul et données validées"
+  },
+  {
+    id: "placements",
+    label: "Placements",
+    title: "Placements",
+    dao: "Ouverture, modification, annulation, renouvellement, rapatriement et fermeture",
+    status: "partiel",
+    api: "/api/v1/treasury/placements",
+    missing: "Formules d'intérêts, statuts, profils, renouvellement et rapatriement"
+  },
+  {
+    id: "new-placement",
+    label: "Nouveau placement",
+    title: "Nouveau placement",
+    dao: "Institution, taux, durée, mode de dépôt et mode de calcul des intérêts",
+    status: "partiel",
+    api: "/api/v1/treasury/placements",
+    missing: "Référentiel institutions, taux et modes validés"
+  },
+  {
+    id: "simulation",
+    label: "Simulation",
+    title: "Simulation de placement",
+    dao: "Simulation et analyse des placements",
+    status: "bloqué",
+    api: "À définir",
+    missing: "Formules d'intérêts et conventions de calcul"
+  },
+  {
+    id: "billing",
+    label: "Facturation",
+    title: "Facturation & recouvrement",
+    dao: "Traitement, vérification, réclamation et rapprochement des factures",
+    status: "vide",
+    api: "À définir",
+    missing: "CPS, modèles de factures et workflow"
+  },
+  {
+    id: "receivables",
+    label: "Créances",
+    title: "Suivi des créances",
+    dao: "Situation des créances, relances et virements de régularisation",
+    status: "vide",
+    api: "À définir",
+    missing: "Créances initiales, relances et règles de régularisation"
+  },
+  {
+    id: "currency-accounts",
+    label: "Comptes devises",
+    title: "Comptes en devises",
+    dao: "Comptes en devises, mouvements, import, extraction et rapprochement",
+    status: "vide",
+    api: "À définir",
+    missing: "Comptes réels et règles comptables"
+  },
+  {
+    id: "operational-accounts",
+    label: "Comptes opérationnels",
+    title: "Comptes opérationnels",
+    dao: "Comptes opérationnels, mouvements, reversements et validations",
+    status: "vide",
+    api: "À définir",
+    missing: "Règles d'imputation et validation"
+  },
+  {
+    id: "wallet",
+    label: "Portefeuille électronique",
+    title: "Portefeuille électronique",
+    dao: "Portefeuille électronique, mouvements et situations",
+    status: "vide",
+    api: "À définir",
+    missing: "Règles de portefeuille et référentiel"
+  },
+  {
+    id: "current-accounts",
+    label: "Comptes courants",
+    title: "Comptes courants",
+    dao: "Encaissement, décaissement, journal, relevé bancaire/CCP",
+    status: "vide",
+    api: "À définir",
+    missing: "Formats bancaires/CCP et règles de journal"
+  },
+  {
+    id: "mandates",
+    label: "Mandatement",
+    title: "Mandatement",
+    dao: "Mandatement, bordereaux, listes et historiques",
+    status: "vide",
+    api: "À définir",
+    missing: "Workflow et références officielles"
+  },
+  {
+    id: "payments",
+    label: "Paiements",
+    title: "Paiements",
+    dao: "Paiement, mandats, états de paiement et contrôle",
+    status: "vide",
+    api: "À définir",
+    missing: "Règles de paiement et validations"
+  },
+  {
+    id: "checks",
+    label: "Chèques",
+    title: "Chèques",
+    dao: "Chèques émis, en circulation, encaissés, annulés et expirés",
+    status: "vide",
+    api: "À définir",
+    missing: "Numérotation, expiration et transitions"
+  },
+  {
+    id: "bank-reconciliation",
+    label: "Rapprochement",
+    title: "Rapprochement bancaire",
+    dao: "Comparaison solde livre / relevé bancaire, anomalies et validation",
+    status: "vide",
+    api: "À définir",
+    missing: "Formats, tolérances et règles d'anomalies"
+  },
+  {
+    id: "budget",
+    label: "Budget",
+    title: "Budget",
+    dao: "Crédits, dossiers, étapes, pièces, commentaires et archivage",
+    status: "vide",
+    api: "À définir",
+    missing: "Étapes, vérificateurs et référentiels"
+  },
+  {
+    id: "budget-execution",
+    label: "Exécution budgétaire",
+    title: "Exécution budgétaire",
+    dao: "Versions, justification, référence et historiques complets",
+    status: "vide",
+    api: "À définir",
+    missing: "Références, versions et validations"
+  },
+  {
+    id: "reporting",
+    label: "Reporting",
+    title: "Reporting",
+    dao: "Exports CSV/Excel et statistiques par module selon utilisateur",
+    status: "vide",
+    api: "À définir",
+    missing: "Modèles officiels et règles de calcul"
+  },
+  {
+    id: "settings",
+    label: "Paramètres",
+    title: "Paramètres",
+    dao: "Listes, comptes, rubriques, programmes, lignes, devises, statuts et calendrier",
+    status: "vide",
+    api: "À définir",
+    missing: "Référentiels validés par Paositra"
+  },
+  {
+    id: "users",
+    label: "Utilisateurs",
+    title: "Utilisateurs / profils / habilitations",
+    dao: "Utilisateurs avec profil, organe, habilitations et privilèges",
+    status: "bloqué",
+    api: "/api/v1/platform/users",
+    missing: "Matrice contractuelle des rôles et délégations"
+  },
+  {
+    id: "audit",
+    label: "Audit",
+    title: "Audit",
+    dao: "Piste d'audit complète et inaltérable",
+    status: "partiel",
+    api: "/api/v1/platform/audit-events",
+    missing: "Écran d'administration et droits finaux"
+  }
+];
+
 export function App() {
   const auth = useAuth();
   if (!auth.token || !auth.user) {
@@ -57,8 +252,88 @@ export function App() {
   }
   return (
     <AppShell title="Gestion de la Trésorerie">
-      <TreasuryWorkspace />
+      {DEMO_MODE ? <TreasuryDemoWorkspace /> : <TreasuryWorkspace />}
     </AppShell>
+  );
+}
+
+function TreasuryDemoWorkspace() {
+  const firstScreen = demoScreens[0]!;
+  const [activeId, setActiveId] = useState(firstScreen.id);
+  const active = demoScreens.find((screen) => screen.id === activeId) ?? firstScreen;
+
+  return (
+    <>
+      <div className="demo-banner">DÉMONSTRATION PROVISOIRE — NON CONTRACTUELLE</div>
+      <div className="presentation-layout">
+        <nav className="side-menu" aria-label="Écrans de démonstration Trésorerie">
+          {demoScreens.map((screen) => (
+            <button
+              className={screen.id === active.id ? "active" : ""}
+              key={screen.id}
+              onClick={() => setActiveId(screen.id)}
+              type="button"
+            >
+              {screen.label}
+            </button>
+          ))}
+        </nav>
+        <section className="demo-main">
+          <p className="breadcrumb">Lot 1 / Trésorerie / {active.label}</p>
+          <div className="panel">
+            <div className="demo-title">
+              <div>
+                <p className="eyebrow">PAOSITRA MALAGASY</p>
+                <h2>{active.title}</h2>
+                <p className="muted">{active.dao}</p>
+              </div>
+              <span className={`badge ${active.status === "bloqué" ? "warning" : ""}`}>
+                {active.status}
+              </span>
+            </div>
+            <Message type="info">
+              Aucune donnée réelle disponible pour cette démonstration. Les
+              règles métier fines, les référentiels, les modèles de rapports et
+              les habilitations définitives doivent être validés par Paositra.
+            </Message>
+            <div className="kpi-grid">
+              <div className="kpi-card">
+                <span>Données réelles chargées</span>
+                <strong>0</strong>
+                <small>Démo sans données métier</small>
+              </div>
+              <div className="kpi-card">
+                <span>Exports actifs</span>
+                <strong>—</strong>
+                <small>À activer après validation</small>
+              </div>
+              <div className="kpi-card">
+                <span>Règles métier</span>
+                <strong>—</strong>
+                <small>À clarifier</small>
+              </div>
+            </div>
+            <div className="empty-state">
+              <strong>État vide réel</strong>
+              <span>Aucun enregistrement réel n'est présent pour cet écran.</span>
+              <span>API prévue : {active.api}</span>
+              <span>Blocage : {active.missing}</span>
+            </div>
+            <div className="demo-actions">
+              <button className="primary" disabled title="Action à activer après validation des règles métier par Paositra" type="button">
+                Nouvelle action
+              </button>
+              <button className="disabled-action" disabled title="Export désactivé en mode démonstration" type="button">
+                Export désactivé
+              </button>
+              <button className="secondary" disabled title="Workflow non validé contractuellement" type="button">
+                Valider après clarification
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 

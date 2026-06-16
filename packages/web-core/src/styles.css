@@ -127,6 +127,15 @@ button {
   min-height: 100vh;
 }
 
+.demo-banner {
+  background: #8b1427;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 10px clamp(18px, 4vw, 56px);
+  text-align: center;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -153,6 +162,114 @@ button {
 .content {
   width: min(1280px, calc(100% - 32px));
   margin: 28px auto;
+}
+
+.presentation-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.side-menu {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #d8e0e3;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(24 48 57 / 6%);
+}
+
+.side-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #25343b;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.side-menu button.active {
+  background: #25343b;
+  color: #fff;
+}
+
+.demo-main {
+  display: grid;
+  gap: 18px;
+}
+
+.breadcrumb {
+  color: #66747b;
+  font-size: 0.9rem;
+}
+
+.demo-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #edf5fa;
+  color: #225b78;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.badge.warning {
+  background: #fff6df;
+  color: #805400;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #d8e0e3;
+  border-radius: 10px;
+}
+
+.kpi-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.8rem;
+}
+
+.empty-state {
+  display: grid;
+  gap: 8px;
+  padding: 28px;
+  border: 1px dashed #aebbc0;
+  border-radius: 10px;
+  background: #fbfcfd;
+  color: #526269;
+}
+
+.demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.disabled-action {
+  border: 1px solid #c9d2d6;
+  background: #eef2f3;
+  color: #526269;
 }
 
 .tabs {
@@ -228,7 +345,9 @@ th {
 
 @media (max-width: 820px) {
   .topbar,
-  .grid {
+  .grid,
+  .presentation-layout,
+  .kpi-grid {
     display: grid;
     grid-template-columns: 1fr;
   }

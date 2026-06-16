@@ -9,7 +9,7 @@ import {
   Req,
   UseInterceptors
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiTags } from "../common/api-docs.decorators";
 import type { AuthenticatedRequest } from "../common/request-context";
 import { requestMetadata } from "../common/request-context";
 import { IdempotencyInterceptor } from "../platform/idempotency.interceptor";
@@ -48,7 +48,10 @@ export class OperationsController {
   }
 
   @Post("agencies/:id/close")
-  @RequirePermission("operations:agencies:close")
+  @RequirePermission("operations:agencies:close", {
+    type: "agency",
+    routeParam: "id"
+  })
   @UseInterceptors(IdempotencyInterceptor)
   closeAgency(
     @Param("id", ParseUUIDPipe) id: string,
