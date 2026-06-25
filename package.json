@@ -25,7 +25,10 @@
   "overrides": {
     "@nestjs/common": "11.1.26",
     "@nestjs/core": "11.1.26",
-    "@nestjs/platform-express": "11.1.26",
+    "@nestjs/platform-express": {
+      ".": "11.1.26",
+      "multer": "2.2.0"
+    },
     "tsx": "4.22.4"
   },
   "devDependencies": {

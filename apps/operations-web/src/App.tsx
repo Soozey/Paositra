@@ -33,9 +33,19 @@ interface DemoScreen {
   label: string;
   title: string;
   dao: string;
-  status: "visible" | "partiel" | "vide" | "bloqué";
+  status: "visible" | "partiel" | "vide" | "bloqué" | "proposition";
   api: string;
   missing: string;
+  message?: string;
+  details?: DemoDetail[];
+}
+
+interface DemoDetail {
+  subject: string;
+  missing: string;
+  risk: string;
+  hypothesis: string;
+  expected: string;
 }
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
@@ -51,6 +61,124 @@ const emptyAgency = {
   managerManagementStartDate: ""
 };
 
+const paomaClarifications: DemoDetail[] = [
+  {
+    subject: "Matrice des rôles",
+    missing: "Profils, périmètres, délégations et incompatibilités",
+    risk: "Droits excessifs ou blocage des utilisateurs",
+    hypothesis: "RBAC technique provisoire avec refus par défaut",
+    expected: "Matrice contractuelle validée"
+  },
+  {
+    subject: "Workflows et statuts",
+    missing: "Transitions exactes, motifs, rejets et validations",
+    risk: "Workflow inventé ou impossible à recetter",
+    hypothesis: "Statuts techniques minimaux",
+    expected: "Diagrammes et statuts officiels"
+  },
+  {
+    subject: "Référentiel comptable",
+    missing: "PCOP 2006, PCG, procédure interne ou référentiel hybride",
+    risk: "Comptabilité non conforme",
+    hypothesis: "PCOP 2006 comme cadrage provisoire",
+    expected: "Référentiel applicable à PAOMA"
+  },
+  {
+    subject: "Schémas d'écritures",
+    missing: "Débits, crédits, journaux et pièces par opération",
+    risk: "Écritures invalides",
+    hypothesis: "Règles proposed non publiables",
+    expected: "Schémas validés"
+  },
+  {
+    subject: "Données initiales",
+    missing: "Agences, comptes, organes, produits, VP et utilisateurs",
+    risk: "Données fictives",
+    hypothesis: "Aucun seed métier",
+    expected: "Référentiels officiels"
+  },
+  {
+    subject: "Calculs de placements",
+    missing: "Jours, intérêts, arrondis, fiscalité, pénalités",
+    risk: "Calcul financier faux",
+    hypothesis: "Moteur paramétrable désactivé",
+    expected: "Règles financières validées"
+  },
+  {
+    subject: "Imports et intégrations",
+    missing: "CPS, banques, CCP, plateforme X et reprise",
+    risk: "Rapprochements faux",
+    hypothesis: "Adaptateurs à définir",
+    expected: "Contrats et jeux de tests"
+  },
+  {
+    subject: "Documents officiels",
+    missing: "Rapports, factures, tickets, AC, G59/G60",
+    risk: "Documents rejetés",
+    hypothesis: "Exports modèles à valider",
+    expected: "Gabarits officiels"
+  },
+  {
+    subject: "Caisse et agences",
+    missing: "Billetage, seuils, journée, écarts et délégations",
+    risk: "Soldes ou verrouillages faux",
+    hypothesis: "Validation désactivée",
+    expected: "Procédures signées"
+  },
+  {
+    subject: "Sécurité opérationnelle",
+    missing: "SSO, 2FA, sessions, clés, journaux",
+    risk: "Accès non conforme",
+    hypothesis: "Auth locale contrôlée pour démo",
+    expected: "Architecture IAM"
+  },
+  {
+    subject: "Identifiant transaction",
+    missing: "Format, séquence, entité et non-réutilisation",
+    risk: "Traçabilité contestable",
+    hypothesis: "[LOT]-[MODULE]-[TYPE]-[YYYYMMDDHHMMSS]-[ENTITE]-[SEQUENCE]",
+    expected: "Format définitif"
+  },
+  {
+    subject: "Cloud et PRA/PCA",
+    missing: "Fournisseur, RPO/RTO, sauvegarde et recette",
+    risk: "Déploiement non recevable",
+    hypothesis: "Scripts locaux provisoires",
+    expected: "Cible d'exploitation"
+  }
+];
+
+const pcopDetails: DemoDetail[] = [
+  {
+    subject: "Référentiel",
+    missing: "Confirmation officielle du référentiel applicable",
+    risk: "Utiliser un plan comptable non applicable",
+    hypothesis: "PCOP 2006 — Plan Comptable des Opérations Publiques",
+    expected: "Décision PAOMA"
+  },
+  {
+    subject: "Plan de comptes",
+    missing: "Comptes PAOMA validés",
+    risk: "Imputations fausses",
+    hypothesis: "Structure importable en statut proposed",
+    expected: "Plan validé"
+  },
+  {
+    subject: "Journaux",
+    missing: "Journaux officiels",
+    risk: "Journalisation non conforme",
+    hypothesis: "Journaux candidats tous proposed",
+    expected: "Liste des journaux à activer"
+  },
+  {
+    subject: "Règles",
+    missing: "Schémas débit/crédit",
+    risk: "Écritures comptables invalides",
+    hypothesis: "Règles proposed non publiables",
+    expected: "Règles validées par opération"
+  }
+];
+
 const demoScreens: DemoScreen[] = [
   {
     id: "dashboard",
@@ -60,6 +188,15 @@ const demoScreens: DemoScreen[] = [
     status: "vide",
     api: "Agrégats réels à définir",
     missing: "Modèles, seuils, calculs et données validées"
+  },
+  {
+    id: "agencies",
+    label: "Agences",
+    title: "Agences",
+    dao: "Gestion, consultation, ouverture, fermeture, rattachement et paramètres agence",
+    status: "partiel",
+    api: "/api/v1/operations/agencies",
+    missing: "Codiques, seuils, profils et référentiels validés"
   },
   {
     id: "my-agency",
@@ -276,6 +413,28 @@ const demoScreens: DemoScreen[] = [
     status: "partiel",
     api: "/api/v1/platform/audit-events",
     missing: "Écran d'administration et droits finaux"
+  },
+  {
+    id: "pcop-accounting",
+    label: "Cadrage PCOP 2006",
+    title: "Cadrage comptable PCOP 2006",
+    dao: "Comptabilité publique proposée pour cadrer agences, caisses, valeurs, transferts et régularisations",
+    status: "proposition",
+    api: "Tables accounting configurables",
+    missing: "Référentiel, comptes, journaux et schémas validés par PAOMA",
+    message: "Schéma comptable proposé sur base PCOP 2006 — à valider par PAOMA. Aucune écriture réelle n'est générée depuis une règle proposée.",
+    details: pcopDetails
+  },
+  {
+    id: "paoma-clarifications",
+    label: "Points à clarifier",
+    title: "Points à clarifier avec PAOMA",
+    dao: "Décisions indispensables avant activation des modules métier",
+    status: "bloqué",
+    api: "Sans objet",
+    missing: "Décisions PAOMA",
+    message: "Je ne peux pas traiter cette partie car l'information requise est absente des données fournies.",
+    details: paomaClarifications
   }
 ];
 
@@ -301,7 +460,7 @@ function OperationsDemoWorkspace() {
 
   return (
     <>
-      <div className="demo-banner">DÉMONSTRATION PROVISOIRE — NON CONTRACTUELLE</div>
+      <div className="demo-banner">DÉMONSTRATION PROVISOIRE — CONFORME DAO — DONNÉES MÉTIER À VALIDER</div>
       <div className="presentation-layout">
         <nav className="side-menu" aria-label="Écrans de démonstration Opérations">
           {demoScreens.map((screen) => (
@@ -324,14 +483,13 @@ function OperationsDemoWorkspace() {
                 <h2>{active.title}</h2>
                 <p className="muted">{active.dao}</p>
               </div>
-              <span className={`badge ${active.status === "bloqué" ? "warning" : ""}`}>
+              <span className={`badge ${active.status === "bloqué" || active.status === "proposition" ? "warning" : ""}`}>
                 {active.status}
               </span>
             </div>
             <Message type="info">
-              Aucune donnée réelle disponible pour cette démonstration. Aucun
-              chiffre d'affaires, stock VP, déficit, excédent ou mouvement de
-              caisse n'est simulé.
+              {active.message ??
+                "Aucune donnée réelle disponible pour cette démonstration. Aucun chiffre d'affaires, stock VP, déficit, excédent ou mouvement de caisse n'est simulé."}
             </Message>
             <div className="kpi-grid">
               <div className="kpi-card">
@@ -356,6 +514,32 @@ function OperationsDemoWorkspace() {
               <span>API prévue : {active.api}</span>
               <span>Blocage : {active.missing}</span>
             </div>
+            {active.details && (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Sujet</th>
+                      <th>Ce qui manque</th>
+                      <th>Risque</th>
+                      <th>Hypothèse KCI</th>
+                      <th>À confirmer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {active.details.map((item) => (
+                      <tr key={item.subject}>
+                        <td>{item.subject}</td>
+                        <td>{item.missing}</td>
+                        <td>{item.risk}</td>
+                        <td>{item.hypothesis}</td>
+                        <td>{item.expected}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="demo-actions">
               <button className="primary" disabled title="Action à activer après validation des règles métier par Paositra" type="button">
                 Nouvelle action

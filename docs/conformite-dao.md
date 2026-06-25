@@ -10,6 +10,34 @@ Aucune ligne n'est marquée `Implémenté`. Ce statut exige une preuve cohérent
 du frontend, de l'API, de PostgreSQL, du RBAC, de l'audit, des exports requis et
 des tests unitaires ou intégrés.
 
+## Référentiel de cadrage proposé
+
+Le DAO reste la référence contractuelle principale. Le PCOP 2006 est utilisé
+uniquement comme hypothèse de cadrage comptable public à confirmer avec PAOMA.
+Les comptes, journaux, schémas d'écritures, circuits de validation et modèles de
+rapports restent à valider officiellement avant activation comptable.
+
+Valeurs utilisées :
+
+- `DAO uniquement`;
+- `DAO + PCOP 2006 à valider`;
+- `DAO + procédure interne PAOMA requise`;
+- `À clarifier`.
+
+| Module / exigence | Référentiel de cadrage proposé | Position |
+|---|---|---|
+| Placements | DAO + PCOP 2006 à valider | Le DAO demande la fonctionnalité. Le PCOP 2006 peut servir de base de cadrage comptable. Les comptes et schémas d'écriture définitifs restent à valider avec PAOMA. |
+| Facturation / recouvrement | DAO + procédure interne PAOMA requise | Le DAO demande la fonctionnalité. Les formats CPS, modèles de factures, relances et écritures de régularisation restent à valider. |
+| Comptes en devises, comptes opérationnels, portefeuille électronique | DAO + PCOP 2006 à valider | Le DAO demande la fonctionnalité. Le PCOP 2006 cadre les comptes financiers et la trésorerie, sans figer les comptes PAOMA. |
+| Comptes courants, mandats, paiements, chèques | DAO + PCOP 2006 à valider | Le DAO demande la fonctionnalité. Les journaux, comptes, transitions et justificatifs définitifs restent à valider. |
+| Rapprochement bancaire / CCP | DAO + procédure interne PAOMA requise | Le DAO demande la fonctionnalité. Les formats bancaires/CCP, tolérances, anomalies et régularisations restent à clarifier. |
+| Budget / exécution budgétaire | DAO + PCOP 2006 à valider | Le DAO demande la fonctionnalité. Le PCOP 2006 peut cadrer l'exercice, les droits et obligations, mais les circuits PAOMA restent requis. |
+| Agences, portefeuilles, valeurs, versements, rapatriements | DAO + procédure interne PAOMA requise | Le DAO demande la fonctionnalité. Les codiques, seuils, stocks VP, ME, transferts et responsabilités ne doivent pas être inventés. |
+| Guichets, caisses, opérations caisse, validation journée | DAO + PCOP 2006 à valider | Le DAO demande la fonctionnalité. Le PCOP 2006 cadre caisse et comptes financiers; les règles de journée, billetage et écarts restent à valider. |
+| Vérification, déficit/excédent, accusés de crédit, mise à disposition | DAO + procédure interne PAOMA requise | Le DAO demande la fonctionnalité. Les responsabilités, documents officiels et schémas comptables doivent être confirmés. |
+| Produits/services et valeurs postales | DAO + procédure interne PAOMA requise | Le DAO demande la fonctionnalité. Les référentiels, tarifs, stocks et modes de comptabilisation restent à fournir. |
+| Audit, RBAC, identifiant unique de transaction | DAO uniquement | Le DAO demande audit, sécurité et identifiant unique. Le format et la matrice de droits restent à clarifier. |
+
 | Référence DAO | Page | Exigence exacte | Lot | Module | API prévue | Tables PostgreSQL prévues | Écran prévu | Export prévu | Audit prévu | Tests prévus | Statut | Preuve d'implémentation |
 |---|---:|---|---|---|---|---|---|---|---|---|---|---|
 | Spécifications techniques | 68 | « Structure globale : modules, recherche, archivage, interface de saisie uniforme [...] et API avec d'autres applications » | 1 | Global | `/api/v1/treasury` | `platform`, `treasury` | Application Trésorerie | Selon modules | Actions et exports | API, UI, intégration | En cours | Structure créée; recherche et archivage non couverts |

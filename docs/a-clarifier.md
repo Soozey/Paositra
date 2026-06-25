@@ -4,6 +4,23 @@ Pour chacun des points ci-dessous :
 
 « Je ne peux pas traiter cette partie car l'information requise est absente des données fournies. »
 
+## Synthèse des 12 points à clarifier avec PAOMA
+
+| Point | Ce qui manque | Risque si développé sans validation | Hypothèse KCI | Confirmation attendue PAOMA |
+|---|---|---|---|---|
+| 1. Matrice complète des rôles, profils et permissions | Profils officiels, périmètres, délégations, incompatibilités | Droits excessifs, blocage d'utilisateurs ou contournement métier | RBAC technique provisoire avec refus par défaut | Matrice contractuelle signée |
+| 2. Workflows exacts et statuts métier | Transitions, motifs, validations et rejets par module | Workflows inventés ou impossibles à recetter | Statuts techniques minimaux et actions désactivées | Statuts officiels et diagrammes de flux |
+| 3. Référentiel comptable applicable | PCOP 2006, PCG, procédure interne ou référentiel hybride | Comptabilité non conforme | PCOP 2006 comme cadrage public provisoire | Référentiel applicable à PAOMA |
+| 4. Schémas d'écritures comptables | Débits, crédits, journaux, pièces et responsables par opération | Écritures invalides ou non auditables | Tables et règles `proposed`, non publiables | Schémas validés par responsables habilités |
+| 5. Données initiales et référentiels officiels | Agences, codiques, comptes, VP, produits, organes, utilisateurs | Données fictives ou incohérentes | Aucun seed métier réel | Fichiers validés et procédure de reprise |
+| 6. Règles de calcul des placements | Conventions de jours, intérêts, arrondis, fiscalité, pénalités | Calculs financiers faux | Moteur paramétrable désactivé | Règles financières officielles |
+| 7. Formats d'import et d'intégration | CPS, banques, CCP, plateforme X, erreurs et reprise | Imports fragiles et rapprochements faux | Adaptateurs à définir | Contrats techniques et jeux de tests |
+| 8. Modèles officiels de rapports, factures, tickets, AC, G59/G60 | Gabarits, champs, signatures, pagination, mentions | Documents rejetés en recette | Exports vides marqués modèle à valider | Modèles officiels validés |
+| 9. Règles exactes de caisse et d'agence | Billetage, journée, seuils, déficit/excédent, délégations | Soldes faux ou journée mal verrouillée | Écrans vides et validations désactivées | Procédures caisse/agence |
+| 10. Sécurité opérationnelle | SSO, 2FA, sessions, clés, journaux, conservation | Accès non conforme ou audit insuffisant | Auth locale contrôlée pour démo | Architecture IAM et politique sécurité |
+| 11. Identifiant unique de transaction | Format, séquence, entité, réinitialisation, annulation | Traçabilité contestable | Format technique configurable proposé | Format définitif et règles de non-réutilisation |
+| 12. Cloud, sauvegarde, PRA/PCA et critères de recette | Fournisseur, région, RPO/RTO, tests de restauration | Déploiement non recevable | Documentation et scripts locaux provisoires | Cible d'exploitation et critères signés |
+
 | Sujet | Information manquante | Impact si non clarifié |
 |---|---|---|
 | Rôles et permissions | Matrice complète des profils, actions autorisées, délégations, incompatibilités et périmètres | Impossible de finaliser RBAC, menus, routes, exports et validations |

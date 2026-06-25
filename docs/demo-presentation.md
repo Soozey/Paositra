@@ -4,13 +4,16 @@ Référence : `DAOO n°26/005-PAOSITRA/DG/PRMP/AOO`.
 
 Cette démo est provisoire, non contractuelle et séparée de la production. Elle
 montre l'architecture, la séparation des lots, la navigation, le RBAC
-provisoire, l'audit technique, l'OpenAPI et les écrans attendus par le DAO sous
-forme d'états vides propres. Aucune exigence n'est marquée `Implémenté`.
+provisoire, l'audit technique, l'OpenAPI, le cadrage PCOP 2006 proposé et les
+écrans attendus par le DAO sous forme d'états vides propres. Aucune exigence
+n'est marquée `Implémenté`.
 
 ## Règles de présentation
 
-- Dire explicitement : `DÉMONSTRATION PROVISOIRE — NON CONTRACTUELLE`.
+- Dire explicitement : `DÉMONSTRATION PROVISOIRE — CONFORME DAO — DONNÉES MÉTIER À VALIDER`.
 - Ne pas présenter les rôles, statuts, workflows ou calculs comme définitifs.
+- Présenter le PCOP 2006 comme hypothèse de cadrage comptable public, à
+  confirmer avec PAOMA.
 - Ne pas créer de seed métier.
 - Ne pas afficher de fausse agence, caisse, opération, placement ou statistique.
 - Utiliser uniquement les états vides ou les données réelles de la base locale.
@@ -54,6 +57,8 @@ exports sont affichés comme désactivés.
 | Paramètres | vide | Référentiels | Référentiels validés | Valeurs initiales | État vide réel | Créer de faux paramètres |
 | Utilisateurs / profils | bloqué | Habilitations et privilèges | Matrice RBAC | Délégations et périmètres | RBAC provisoire technique | Présenter des rôles inventés |
 | Audit | partiel | Piste d'audit complète | Événements techniques | Écran final et droits | Audit append-only démontré côté socle | Faire croire que l'écran final est complet |
+| Cadrage comptable PCOP 2006 | proposition | Comptabilité publique à cadrer | Validation PAOMA | Comptes, journaux et schémas | Schéma comptable proposé sur base PCOP 2006 — à valider par PAOMA | Faire croire que le plan comptable est définitif |
+| Points à clarifier | visible | Gouvernance de validation | Décisions PAOMA | Voir liste des 12 points | Ce qui manque est explicite | Développer sans arbitrage |
 
 ## Écrans Lot 2 - Opérations
 
@@ -85,3 +90,5 @@ exports sont affichés comme désactivés.
 | Paramètres | vide | Référentiels | Données validées | Paramètres officiels | État vide réel | Figer faux référentiel |
 | Utilisateurs / profils | bloqué | Habilitations | Matrice RBAC | Rôles et périmètres | RBAC provisoire | Présenter des rôles inventés |
 | Audit | partiel | Audit inaltérable | Événements techniques | Droits et écran final | Audit append-only du socle | Faire croire que l'audit fonctionnel est complet |
+| Cadrage comptable PCOP 2006 | proposition | Comptabilité agences et caisse | Validation PAOMA | Comptes, journaux et schémas | Schéma comptable proposé sur base PCOP 2006 — à valider par PAOMA | Faire croire que les écritures sont activées |
+| Points à clarifier | visible | Gouvernance de validation | Décisions PAOMA | Voir liste des 12 points | Ce qui manque est explicite | Développer sans arbitrage |
