@@ -4,13 +4,14 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Agency } from "../database/entities";
 import { OperationsController } from "./operations.controller";
 import { OperationsService } from "./operations.service";
+import { CashController } from "./cash";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Agency]),
     MulterModule.register({ limits: { fileSize: 5 * 1024 * 1024 } })
   ],
-  controllers: [OperationsController],
+  controllers: [OperationsController, CashController],
   providers: [OperationsService]
 })
 export class OperationsModule {}
