@@ -7,12 +7,13 @@ import { PlacementInsightsController } from "./placement-insights";
 import { PlacementLifecycleController } from "./placement-lifecycle";
 import { BillingController } from "./billing";
 import { CurrentAccountsController } from "./current-accounts";
+import { BudgetController } from "./budget";
 
 @Module({
   imports: [TypeOrmModule.forFeature([Institution, Placement, PlacementHistory])],
   controllers: [
     TreasuryController, PlacementInsightsController, PlacementLifecycleController,
-    BillingController, CurrentAccountsController
+    BillingController, CurrentAccountsController, BudgetController
   ],
   providers: [TreasuryService]
 })
