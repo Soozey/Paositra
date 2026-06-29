@@ -5,7 +5,7 @@
 
 ## Avant de commencer
 Lancer API + Lot 1 + Lot 2 (voir `docs/guide-prise-en-main.md`), puis seed démo + seed compléments PAOMA.
-Se connecter selon le rôle à montrer (mot de passe `Demo@1234`).
+Se connecter selon le rôle à montrer avec les mots de passe régénérés localement par `npm run demo:reset-users`.
 
 ## Minute 0–1 — Cadrage honnête
 « Ceci est une démonstration. Le DAO reste la référence. Tout ce qui n'a pas encore été fourni

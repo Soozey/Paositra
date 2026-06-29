@@ -1,0 +1,254 @@
+import pg from "pg";
+import bcrypt from "bcryptjs";
+import { randomBytes, randomUUID } from "node:crypto";
+
+const url = process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
+
+if (process.env.DEMO_MODE !== "true") {
+  throw new Error("Refus: lancez avec DEMO_MODE=true pour confirmer le mode demonstration local.");
+}
+if (process.env.NODE_ENV === "production") {
+  throw new Error("Refus: demo:reset-users ne s'execute jamais avec NODE_ENV=production.");
+}
+if (!url) {
+  throw new Error("MIGRATION_DATABASE_URL ou DATABASE_URL requis.");
+}
+
+const client = new pg.Client({ connectionString: url });
+
+const ROLE_TEMPLATES = [
+  ["DEMO_ADMIN_TECH", "Administrateur technique demo", "common", "global", "Proposition a valider - administration technique locale de demonstration"],
+  ["DEMO_ADMIN_FONCTIONNEL", "Administrateur fonctionnel demo", "common", "global", "Proposition a valider - vue globale de demonstration"],
+  ["DEMO_AUDITEUR", "Auditeur demo", "common", "global", "Proposition a valider - lecture audit et controle"],
+  ["DEMO_CONSULTATION", "Consultation demo", "common", "global", "Proposition a valider - lecture seule direction"],
+  ["DEMO_AGENT_TRESORERIE", "Agent tresorerie demo", "lot1", "organ", "Proposition a valider - saisie Lot 1 limitee"],
+  ["DEMO_RESP_TRESORERIE", "Responsable tresorerie demo", "lot1", "direction", "Proposition a valider - pilotage Lot 1"],
+  ["DEMO_COMPTABLE_TRESORERIE", "Comptable tresorerie demo", "lot1", "organ", "Proposition a valider - comptabilite Lot 1"],
+  ["DEMO_VERIFICATEUR_TRESORERIE", "Verificateur tresorerie demo", "lot1", "organ", "Proposition a valider - controle Lot 1"],
+  ["DEMO_DECIDEUR_TRESORERIE", "Decideur tresorerie demo", "lot1", "direction", "Proposition a valider - validation Lot 1"],
+  ["DEMO_AGENT_GUICHET", "Agent guichet demo", "lot2", "counter", "Proposition a valider - guichet Lot 2"],
+  ["DEMO_CAISSIER", "Caissier demo", "lot2", "counter", "Proposition a valider - caisse Lot 2"],
+  ["DEMO_CHEF_AGENCE", "Chef agence demo", "lot2", "agency", "Proposition a valider - supervision agence Lot 2"],
+  ["DEMO_VERIFICATEUR_OPERATIONS", "Verificateur operations demo", "lot2", "agency", "Proposition a valider - verification Lot 2"],
+  ["DEMO_COMPTABLE_SIEGE", "Comptable siege demo", "lot2", "direction", "Proposition a valider - comptabilite siege Lot 2"],
+  ["DEMO_SUPERVISEUR_OPERATIONS", "Superviseur operations demo", "lot2", "direction", "Proposition a valider - supervision Lot 2"]
+];
+
+const PERMISSIONS = {
+  platformRead: ["platform:dashboard:read", "platform:roles:read"],
+  platformAdmin: [
+    "platform:users:manage",
+    "platform:config:read",
+    "platform:config:manage",
+    "platform:audit:read",
+    "platform:roles:read",
+    "platform:roles:manage",
+    "platform:dashboard:read",
+    "platform:notifications:read",
+    "platform:agencies:validate"
+  ],
+  audit: ["platform:audit:read", "platform:dashboard:read", "platform:roles:read"],
+  treasuryRead: [
+    "treasury:dashboard:read",
+    "treasury:institutions:read",
+    "treasury:placements:read",
+    "treasury:placements:export",
+    "treasury:accounts:read",
+    "treasury:flows:read",
+    "treasury:reports:read",
+    "treasury:reports:export",
+    "treasury:receivables:read",
+    "treasury:receivables:export",
+    "treasury:budget:read"
+  ],
+  treasuryManage: [
+    "treasury:institutions:write",
+    "treasury:institutions:validate",
+    "treasury:institutions:export",
+    "treasury:placements:write",
+    "treasury:placements:approve",
+    "treasury:placements:cancel",
+    "treasury:placements:close",
+    "treasury:accounts:manage",
+    "treasury:flows:manage",
+    "treasury:receivables:write",
+    "treasury:budget:manage",
+    "treasury:budget:validate"
+  ],
+  operationsRead: [
+    "operations:dashboard:read",
+    "operations:agencies:read",
+    "operations:counters:read",
+    "operations:financial:read",
+    "operations:postal:read",
+    "operations:parcels:read",
+    "operations:transfers:read",
+    "operations:reports:read",
+    "operations:reports:export",
+    "operations:verification:read",
+    "platform:notifications:read"
+  ],
+  operationsManage: [
+    "operations:agencies:write",
+    "operations:agencies:validate",
+    "operations:agencies:export",
+    "operations:agencies:import",
+    "operations:agencies:close",
+    "operations:counters:manage",
+    "operations:financial:manage",
+    "operations:postal:manage",
+    "operations:parcels:manage",
+    "operations:transfers:manage",
+    "operations:cash:open",
+    "operations:cash:operate",
+    "operations:cash:close",
+    "operations:day:validate",
+    "operations:verification:validate",
+    "operations:fund:manage"
+  ]
+};
+
+function unique(values) {
+  return [...new Set(values)];
+}
+
+const USER_SPECS = [
+  {
+    id: "00000000-0000-4000-b000-000000000101",
+    email: "demo.admin@paositra.local",
+    displayName: "[DEMO] Administration fonctionnelle",
+    role: "DEMO_ADMIN_FONCTIONNEL",
+    usage: "Vue globale demo",
+    permissions: unique([
+      ...PERMISSIONS.platformAdmin,
+      ...PERMISSIONS.treasuryRead,
+      ...PERMISSIONS.treasuryManage,
+      ...PERMISSIONS.operationsRead,
+      ...PERMISSIONS.operationsManage
+    ])
+  },
+  {
+    id: "00000000-0000-4000-b000-000000000102",
+    email: "demo.tresorerie@paositra.local",
+    displayName: "[DEMO] Responsable tresorerie",
+    role: "DEMO_RESP_TRESORERIE",
+    usage: "Parcours Lot 1 Tresorerie",
+    permissions: unique([...PERMISSIONS.platformRead, ...PERMISSIONS.treasuryRead, ...PERMISSIONS.treasuryManage])
+  },
+  {
+    id: "00000000-0000-4000-b000-000000000103",
+    email: "demo.operations@paositra.local",
+    displayName: "[DEMO] Chef agence operations",
+    role: "DEMO_CHEF_AGENCE",
+    usage: "Parcours Lot 2 Operations",
+    permissions: unique([...PERMISSIONS.platformRead, ...PERMISSIONS.operationsRead, ...PERMISSIONS.operationsManage])
+  },
+  {
+    id: "00000000-0000-4000-b000-000000000104",
+    email: "demo.dg@paositra.local",
+    displayName: "[DEMO] Consultation direction",
+    role: "DEMO_CONSULTATION",
+    usage: "Lecture direction sans action sensible",
+    permissions: unique([...PERMISSIONS.platformRead, ...PERMISSIONS.treasuryRead, ...PERMISSIONS.operationsRead])
+  },
+  {
+    id: "00000000-0000-4000-b000-000000000105",
+    email: "demo.audit@paositra.local",
+    displayName: "[DEMO] Audit",
+    role: "DEMO_AUDITEUR",
+    usage: "Audit et controles lecture seule",
+    permissions: unique([...PERMISSIONS.audit, ...PERMISSIONS.treasuryRead, ...PERMISSIONS.operationsRead])
+  }
+];
+
+function password() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return `Demo-PAO-2026-${[...randomBytes(4)].map((byte) => alphabet[byte % alphabet.length]).join("")}!`;
+}
+
+await client.connect();
+try {
+  await client.query("BEGIN");
+
+  for (const [code, label, lot, scopeType, description] of ROLE_TEMPLATES) {
+    await client.query(
+      `INSERT INTO platform.rbac_role_templates(code,label,lot,scope_type,description,status)
+       VALUES ($1,$2,$3,$4,$5,'proposition_a_valider')
+       ON CONFLICT (code) DO UPDATE SET
+         label=EXCLUDED.label,
+         lot=EXCLUDED.lot,
+         scope_type=EXCLUDED.scope_type,
+         description=EXCLUDED.description,
+         status='proposition_a_valider'`,
+      [code, label, lot, scopeType, description]
+    );
+  }
+
+  for (const code of unique(USER_SPECS.flatMap((user) => user.permissions))) {
+    await client.query(
+      `INSERT INTO platform.permissions(code,description)
+       VALUES ($1,'Permission technique demo - NON CONTRACTUEL - A VALIDER PAOSITRA')
+       ON CONFLICT (code) DO NOTHING`,
+      [code]
+    );
+  }
+
+  const output = [];
+  for (const user of USER_SPECS) {
+    const tempPassword = password();
+    await client.query(
+      `INSERT INTO platform.users(id,email,display_name,password_hash,is_active,must_change_password)
+       VALUES($1,$2,$3,$4,true,false)
+       ON CONFLICT (id) DO UPDATE SET
+         email=EXCLUDED.email,
+         display_name=EXCLUDED.display_name,
+         password_hash=EXCLUDED.password_hash,
+         is_active=true,
+         blocked_until=NULL,
+         must_change_password=false,
+         updated_at=now()`,
+      [user.id, user.email, user.displayName, await bcrypt.hash(tempPassword, 12)]
+    );
+    await client.query("DELETE FROM platform.user_permissions WHERE user_id = $1", [user.id]);
+    for (const code of user.permissions) {
+      await client.query(
+        `INSERT INTO platform.user_permissions(id,user_id,permission_code,scope_type,scope_id,granted_by)
+         VALUES($1,$2,$3,'global',NULL,$4)
+         ON CONFLICT DO NOTHING`,
+        [randomUUID(), user.id, code, USER_SPECS[0].id]
+      );
+    }
+    output.push({ ...user, password: tempPassword });
+  }
+
+  await client.query(
+    "UPDATE platform.sessions SET revoked_at = now() WHERE user_id = ANY($1) AND revoked_at IS NULL",
+    [USER_SPECS.map((user) => user.id)]
+  );
+  await client.query(
+    `INSERT INTO platform.audit_events(id,actor_user_id,action,object_type,object_id,metadata)
+     VALUES($1,$2,'demo.users.reset','platform.users',NULL,$3)`,
+    [
+      randomUUID(),
+      USER_SPECS[0].id,
+      JSON.stringify({
+        emails: USER_SPECS.map((user) => user.email),
+        mode: "DEMO - NON CONTRACTUEL",
+        passwordsPersistedInRepository: false
+      })
+    ]
+  );
+
+  await client.query("COMMIT");
+
+  console.log("Comptes demo locaux regeneres. Mots de passe affiches une seule fois:");
+  output.forEach((user, index) => {
+    console.log(`Compte ${index + 1} | ${user.email} | ${user.password} | ${user.role} | ${user.usage}`);
+  });
+} catch (error) {
+  await client.query("ROLLBACK");
+  console.error("DEMO RESET ERROR:", error.message);
+  process.exit(1);
+} finally {
+  await client.end();
+}

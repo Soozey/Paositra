@@ -3,12 +3,17 @@
 // Usage: MIGRATION_DATABASE_URL=postgres://... node scripts/seed-demo.mjs
 import pg from "pg";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
 const url = process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
+if (process.env.DEMO_MODE !== "true") throw new Error("DEMO_MODE=true requis pour charger les donnees de demonstration.");
+if (process.env.NODE_ENV === "production") throw new Error("Seed demo interdit avec NODE_ENV=production.");
 if (!url) throw new Error("MIGRATION_DATABASE_URL ou DATABASE_URL requis");
 const client = new pg.Client({ connectionString: url });
 
-const PW = "Demo@1234";
+const generatedPassword = `Demo-PAO-2026-${randomBytes(3).toString("hex").toUpperCase()}!`;
+const PW = process.env.DEMO_SEED_PASSWORD?.trim() || generatedPassword;
+if (PW.length < 12) throw new Error("DEMO_SEED_PASSWORD doit contenir au moins 12 caracteres.");
 const ADMIN = "00000000-0000-4000-a000-000000000001";
 
 const PERMS = {
@@ -102,6 +107,8 @@ try {
       [a.id, a.code, a.name, a.region, a.city, a.district, a.type, a.cash, ADMIN]
     );
   await client.query("COMMIT");
+  console.log("Mot de passe temporaire seed demo (affiche une seule fois):");
+  for (const user of USERS) console.log(`${user.email} | ${PW}`);
   console.log(`SEED OK: ${USERS.length} comptes démo, ${INSTITUTIONS.length} institutions, ${PLACEMENTS.length} placements, ${AGENCIES.length} agences.`);
 } catch (e) {
   await client.query("ROLLBACK");

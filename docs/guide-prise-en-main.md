@@ -5,7 +5,17 @@
 > Vous pouvez saisir, valider, annuler, exporter : tout est réellement enregistré en base.
 
 ## 1. Les 10 comptes de démonstration
-Mot de passe identique pour tous : **Demo@1234**
+Mots de passe temporaires : generes localement par `npm run demo:reset-users`, jamais committes.
+
+Comptes de presentation recommandes :
+
+| E-mail | Role demo | Usage |
+|---|---|---|
+| demo.admin@paositra.local | DEMO_ADMIN_FONCTIONNEL | Vue globale demo |
+| demo.tresorerie@paositra.local | DEMO_RESP_TRESORERIE | Lot 1 Tresorerie |
+| demo.operations@paositra.local | DEMO_CHEF_AGENCE | Lot 2 Operations |
+| demo.dg@paositra.local | DEMO_CONSULTATION | Consultation direction |
+| demo.audit@paositra.local | DEMO_AUDITEUR | Audit lecture seule |
 
 | E-mail | Rôle | Ce qu'il peut faire |
 |---|---|---|
@@ -20,8 +30,7 @@ Mot de passe identique pour tous : **Demo@1234**
 | demo.verificateur@paositra-demo.mg | Vérificateur | Vérification soldes/écarts (lecture, sans saisie) |
 | demo.comptasieg@paositra-demo.mg | Comptable siège | Reporting et comptabilité agences |
 
-> Le mot de passe `Demo@1234` est volontairement simple pour la démo. La politique
-> réelle (≥ 12 caractères) s'applique à la création/au changement de mot de passe.
+> Les mots de passe de démonstration sont temporaires, régénérables localement et non committés.
 
 ## 2. Démarrer le logiciel sur Windows (étape par étape)
 Ouvrez **PowerShell** dans le dossier du projet, puis copiez-collez chaque bloc.
@@ -50,7 +59,10 @@ npm run db:migrate
 **e) Charger les données de démonstration (10 comptes + données [DEMO])**
 ```powershell
 $env:MIGRATION_DATABASE_URL = (Select-String -Path .env -Pattern '^MIGRATION_DATABASE_URL=').Line -replace '^MIGRATION_DATABASE_URL=',''
-node scripts/seed-demo.mjs
+$env:DEMO_MODE = "true"
+npm run db:seed
+npm run db:seed:paoma
+npm run demo:reset-users
 ```
 
 **f) Démarrer les trois services (un onglet PowerShell par commande)**
@@ -123,8 +135,10 @@ npm install
 docker compose up -d
 npm run db:migrate
 $env:MIGRATION_DATABASE_URL="postgresql://paositra_owner:<pwd>@localhost:55432/paositra"
-node scripts/seed-demo.mjs                 # 10 comptes + données Lot 1 + permissions modules
-node scripts/seed-paoma-complements.mjs    # 93 postes + 19 rôles + jours fériés
+$env:DEMO_MODE="true"
+npm run db:seed                            # comptes historiques + données Lot 1 + permissions modules
+npm run db:seed:paoma                      # 93 postes + 19 rôles + jours fériés
+npm run demo:reset-users                   # 5 comptes de présentation, mots de passe affichés une seule fois
 npm run dev:api ; npm run dev:treasury ; npm run dev:operations
 ```
 
