@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { CurrentAccountsModule } from "./CurrentAccountsModule";
 import { BudgetModule } from "./BudgetModule";
+import { TreasuryDashboardModule } from "./TreasuryDashboardModule";
 import {
   ApiError,
   AppShell,
@@ -768,7 +769,7 @@ function DemoPreview({
 
 function TreasuryWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"institutions" | "placements" | "receivables" | "accounts" | "budget" | "roles" | "clarifications" | "users" | "audit">("placements");
+  const [tab, setTab] = useState<"institutions" | "placements" | "receivables" | "accounts" | "budget" | "dashboard" | "roles" | "clarifications" | "users" | "audit">("placements");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -1032,6 +1033,9 @@ function TreasuryWorkspace() {
         <button className={tab === "budget" ? "active" : ""} onClick={() => setTab("budget")}>
           Budget
         </button>
+        <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")}>
+          Tableau de bord
+        </button>
         <button className={tab === "institutions" ? "active" : ""} onClick={() => setTab("institutions")}>
           Institutions
         </button>
@@ -1049,7 +1053,9 @@ function TreasuryWorkspace() {
         </button>
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "budget" ? (
+      {tab === "dashboard" ? (
+        <TreasuryDashboardModule />
+      ) : tab === "budget" ? (
         <BudgetModule />
       ) : tab === "accounts" ? (
         <CurrentAccountsModule />
