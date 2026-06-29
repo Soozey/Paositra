@@ -36,6 +36,25 @@ interface Placement {
   version: number;
 }
 
+interface AuditEvent {
+  id: string;
+  occurredAt: string;
+  action: string;
+  objectType: string;
+  objectId: string | null;
+  actorUserId: string | null;
+}
+
+interface RbacRole {
+  id: string;
+  code: string;
+  label: string;
+  lot: string;
+  scopeType: string;
+  description: string | null;
+  status: string;
+}
+
 interface DemoScreen {
   id: string;
   label: string;
@@ -56,6 +75,17 @@ interface DemoDetail {
   expected: string;
 }
 
+interface DemoBlueprint {
+  tableTitle: string;
+  columns: string[];
+  formTitle: string;
+  fields: string[];
+  documentTitle: string;
+  documentLines: string[];
+  workflowTitle: string;
+  workflowSteps: string[];
+}
+
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
 const emptyPlacement = {
@@ -67,6 +97,13 @@ const emptyPlacement = {
   depositMode: "",
   interestCalculationMode: "",
   startDate: ""
+};
+
+const emptyUserForm = {
+  email: "",
+  displayName: "",
+  password: "",
+  mustChangePassword: true
 };
 
 const paomaClarifications: DemoDetail[] = [
@@ -186,6 +223,104 @@ const pcopDetails: DemoDetail[] = [
     expected: "Règles validées par opération"
   }
 ];
+
+const treasuryBlueprints: Record<string, DemoBlueprint> = {
+  dashboard: {
+    tableTitle: "Indicateurs prévus",
+    columns: ["Indicateur", "Périmètre", "Période", "Source", "Valeur"],
+    formTitle: "Filtres du tableau de bord",
+    fields: ["Période", "Direction", "Compte", "Institution", "Statut"],
+    documentTitle: "Vue consolidée prévue",
+    documentLines: ["Soldes", "Crédits", "Dossiers reçus", "Dossiers traités", "Délais"],
+    workflowTitle: "Chaîne de calcul",
+    workflowSteps: ["Source réelle", "Règle validée", "Agrégation backend", "Contrôle RBAC", "Affichage"]
+  },
+  placements: {
+    tableTitle: "Placements enregistrés",
+    columns: ["Référence", "Institution", "Montant", "Devise", "Taux", "Début", "Échéance", "Statut"],
+    formTitle: "Structure d'un placement",
+    fields: ["Institution", "Montant principal", "Devise", "Taux", "Durée", "Mode dépôt", "Mode calcul", "Date début"],
+    documentTitle: "Journal des placements",
+    documentLines: ["Ouverture", "Renouvellement", "Rapatriement principal", "Rapatriement intérêts", "Clôture"],
+    workflowTitle: "Actions prévues",
+    workflowSteps: ["Créer", "Modifier selon profil", "Notifier", "Rapatrier", "Clôturer", "Historiser"]
+  },
+  institutions: {
+    tableTitle: "Institutions financières",
+    columns: ["Code", "Nom", "Type", "Compte associé", "Statut", "Date validation"],
+    formTitle: "Fiche institution",
+    fields: ["Nom", "Type", "Coordonnées", "Compte bancaire", "Statut", "Note de validation"],
+    documentTitle: "Référentiel institutions",
+    documentLines: ["Institution validée", "Compte associé", "Périmètre autorisé", "Historique des changements"],
+    workflowTitle: "Contrôle référentiel",
+    workflowSteps: ["Proposition", "Validation PAOMA", "Activation", "Archivage sans suppression"]
+  },
+  "new-placement": {
+    tableTitle: "Paramètres nécessaires",
+    columns: ["Paramètre", "Source", "Obligatoire", "Statut", "Commentaire"],
+    formTitle: "Formulaire d'ouverture",
+    fields: ["Institution", "Montant", "Devise", "Taux", "Durée", "Mode dépôt", "Mode calcul", "Justificatif"],
+    documentTitle: "Bordereau d'ouverture",
+    documentLines: ["Référence transaction", "Données placement", "Validation", "Pièces jointes", "Audit"],
+    workflowTitle: "Contrôles avant enregistrement",
+    workflowSteps: ["Institution active", "Droits utilisateur", "Idempotence", "Audit", "Règle comptable validée"]
+  },
+  billing: {
+    tableTitle: "Factures et recouvrements",
+    columns: ["Facture", "Client", "Période", "Montant", "Créance liée", "Statut", "Échéance"],
+    formTitle: "Dossier facture",
+    fields: ["Client", "Période", "CPS source", "Montant", "Pièces", "Motif réclamation", "Statut"],
+    documentTitle: "Gabarit facture vide",
+    documentLines: ["En-tête PAOMA", "Client", "Période facturée", "Lignes de facturation", "Total", "Mentions à valider"],
+    workflowTitle: "Workflow facturation",
+    workflowSteps: ["Importer CPS", "Vérifier", "Rapprocher créance", "Émettre facture", "Relancer", "Recouvrer"]
+  },
+  reporting: {
+    tableTitle: "Rapports disponibles",
+    columns: ["Rapport", "Période", "Format", "Source", "Statut modèle"],
+    formTitle: "Paramètres d'export",
+    fields: ["Rapport", "Période", "Filtre", "Format", "Destinataire"],
+    documentTitle: "Marquage export",
+    documentLines: ["DÉMO — NON CONTRACTUEL — MODÈLE À VALIDER PAR PAOMA", "Filtres", "Colonnes", "Signature", "Horodatage"],
+    workflowTitle: "Contrôles export",
+    workflowSteps: ["Données réelles", "RBAC", "Traçabilité", "Modèle validé", "Génération"]
+  },
+  "pcop-accounting": {
+    tableTitle: "Objets comptables configurables",
+    columns: ["Objet", "Statut", "Source", "Validation requise", "Utilisation"],
+    formTitle: "Référence comptable",
+    fields: ["Référentiel", "Version", "Source", "Statut", "Validateur", "Note"],
+    documentTitle: "Schéma comptable proposé",
+    documentLines: ["Référentiel PCOP 2006 à confirmer", "Journal proposé", "Débit proposé", "Crédit proposé", "Validation PAOMA"],
+    workflowTitle: "Publication d'écriture",
+    workflowSteps: ["Règle proposed", "Validation PAOMA", "Compte actif", "Débit = crédit", "Postage", "Contrepassation si correction"]
+  },
+  "paoma-clarifications": {
+    tableTitle: "Décisions attendues",
+    columns: ["Point", "Responsable", "Document attendu", "Risque", "Statut"],
+    formTitle: "Fiche de clarification",
+    fields: ["Sujet", "Question", "Impact", "Hypothèse KCI", "Décision PAOMA"],
+    documentTitle: "Compte-rendu de clarification",
+    documentLines: ["Décision", "Responsable", "Date", "Impacts front/back/API/base", "Pièces associées"],
+    workflowTitle: "Traitement d'une clarification",
+    workflowSteps: ["Identifier", "Documenter", "Valider PAOMA", "Mettre à jour matrice", "Implémenter"]
+  }
+};
+
+const defaultTreasuryBlueprint: DemoBlueprint = {
+  tableTitle: "Registre prévu",
+  columns: ["Référence", "Date", "Libellé", "Montant", "Statut", "Validateur", "Audit"],
+  formTitle: "Formulaire prévu",
+  fields: ["Référence", "Date", "Libellé", "Montant", "Pièce justificative", "Commentaire", "Statut"],
+  documentTitle: "Gabarit document vide",
+  documentLines: ["En-tête", "Référence", "Données métier", "Validation", "Mentions et signatures"],
+  workflowTitle: "Workflow à valider",
+  workflowSteps: ["Saisie", "Contrôle", "Validation", "Audit", "Export"]
+};
+
+function getTreasuryBlueprint(screen: DemoScreen) {
+  return treasuryBlueprints[screen.id] ?? defaultTreasuryBlueprint;
+}
 
 const demoScreens: DemoScreen[] = [
   {
@@ -411,7 +546,12 @@ export function App() {
   }
   return (
     <AppShell title="Gestion de la Trésorerie">
-      {DEMO_MODE ? <TreasuryDemoWorkspace /> : <TreasuryWorkspace />}
+      {DEMO_MODE && (
+        <div className="demo-banner">
+          MODE PRÉSENTATION — MODULES CONNECTÉS API UNIQUEMENT — AUCUNE DONNÉE MÉTIER FICTIVE
+        </div>
+      )}
+      <TreasuryWorkspace />
     </AppShell>
   );
 }
@@ -420,6 +560,7 @@ function TreasuryDemoWorkspace() {
   const firstScreen = demoScreens[0]!;
   const [activeId, setActiveId] = useState(firstScreen.id);
   const active = demoScreens.find((screen) => screen.id === activeId) ?? firstScreen;
+  const blueprint = getTreasuryBlueprint(active);
 
   return (
     <>
@@ -477,6 +618,7 @@ function TreasuryDemoWorkspace() {
               <span>API prévue : {active.api}</span>
               <span>Blocage : {active.missing}</span>
             </div>
+            <DemoPreview blueprint={blueprint} screen={active} />
             {active.details && (
               <div className="table-wrap">
                 <table>
@@ -503,17 +645,6 @@ function TreasuryDemoWorkspace() {
                 </table>
               </div>
             )}
-            <div className="demo-actions">
-              <button className="primary" disabled title="Action à activer après validation des règles métier par Paositra" type="button">
-                Nouvelle action
-              </button>
-              <button className="disabled-action" disabled title="Export désactivé en mode démonstration" type="button">
-                Export désactivé
-              </button>
-              <button className="secondary" disabled title="Workflow non validé contractuellement" type="button">
-                Valider après clarification
-              </button>
-            </div>
           </div>
         </section>
       </div>
@@ -521,19 +652,134 @@ function TreasuryDemoWorkspace() {
   );
 }
 
+function DemoPreview({
+  blueprint,
+  screen
+}: {
+  blueprint: DemoBlueprint;
+  screen: DemoScreen;
+}) {
+  return (
+    <div className="module-demo">
+      <section className="capability-board" aria-label="Lecture métier de l'écran">
+        <article>
+          <h3>Visible aujourd'hui</h3>
+          <ul>
+            <li>{blueprint.tableTitle}</li>
+            <li>{blueprint.formTitle}</li>
+            <li>{blueprint.documentTitle}</li>
+            <li>État vide réel sans données inventées</li>
+          </ul>
+        </article>
+        <article>
+          <h3>Demandé par le DAO</h3>
+          <ul>
+            <li>{screen.dao}</li>
+            <li>Registre, saisie, historique, contrôles et export selon le module</li>
+            <li>{blueprint.workflowTitle}</li>
+          </ul>
+        </article>
+        <article>
+          <h3>À valider PAOMA</h3>
+          <ul>
+            <li>{screen.missing}</li>
+            <li>Activation API : {screen.api}</li>
+            <li>Aucun traitement métier définitif sans validation</li>
+          </ul>
+        </article>
+      </section>
+
+      <section className="demo-preview module-surface" aria-labelledby={`${screen.id}-surface`}>
+        <div className="surface-heading">
+          <div>
+            <h3 id={`${screen.id}-surface`}>{blueprint.tableTitle}</h3>
+            <p className="muted">Les colonnes et champs montrent le périmètre attendu, sans créer de donnée métier.</p>
+          </div>
+          <span className="badge warning">modèle à valider</span>
+        </div>
+        <div className="surface-grid">
+          <div className="surface-block wide">
+            <h4>{blueprint.tableTitle}</h4>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    {blueprint.columns.map((column) => (
+                      <th key={column}>{column}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={blueprint.columns.length} className="empty-row">
+                      Aucune donnée réelle disponible. Le tableau montre uniquement la structure attendue.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="surface-block">
+            <h4>{blueprint.formTitle}</h4>
+            <div className="form-skeleton compact">
+              {blueprint.fields.map((field) => (
+                <label key={field}>
+                  {field}
+                  <input disabled placeholder="À valider PAOMA" />
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="surface-block document-preview">
+            <h4>{blueprint.documentTitle}</h4>
+            <div className="document-sheet compact">
+              <div>
+                <strong>PAOSITRA MALAGASY</strong>
+                <span>DÉMO — NON CONTRACTUEL</span>
+              </div>
+              {blueprint.documentLines.map((line) => (
+                <p key={line}>
+                  <span>{line}</span>
+                  <em>À compléter après validation</em>
+                </p>
+              ))}
+            </div>
+          </div>
+          <div className="surface-block">
+            <h4>{blueprint.workflowTitle}</h4>
+            <ol className="workflow-list">
+              {blueprint.workflowSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            <div className="contract-panel">
+              <strong>Front / back / audit</strong>
+              <span>Route ou API prévue : {screen.api}</span>
+              <span>Condition d'activation : {screen.missing}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function TreasuryWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"institutions" | "placements">("placements");
+  const [tab, setTab] = useState<"institutions" | "placements" | "roles" | "clarifications" | "users" | "audit">("placements");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [roles, setRoles] = useState<RbacRole[]>([]);
   const [institutionName, setInstitutionName] = useState("");
   const [placementForm, setPlacementForm] = useState(emptyPlacement);
+  const [userForm, setUserForm] = useState(emptyUserForm);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [institutionResult, placementResult] = await Promise.all([
+      const [institutionResult, placementResult, auditResult, rolesResult] = await Promise.all([
         auth.hasPermission("treasury:institutions:read")
           ? apiRequest<Paged<Institution>>("/api/v1/treasury/institutions?pageSize=100", {
               token: auth.token
@@ -543,10 +789,20 @@ function TreasuryWorkspace() {
           ? apiRequest<Paged<Placement>>("/api/v1/treasury/placements?pageSize=100", {
               token: auth.token
             })
-          : Promise.resolve({ items: [], total: 0 })
+          : Promise.resolve({ items: [], total: 0 }),
+        auth.hasPermission("platform:audit:read")
+          ? apiRequest<Paged<AuditEvent>>("/api/v1/platform/audit-events?pageSize=20", {
+              token: auth.token
+            })
+          : Promise.resolve({ items: [], total: 0 }),
+        auth.hasPermission("platform:roles:read")
+          ? apiRequest<{ items: RbacRole[] }>("/api/v1/platform/roles", { token: auth.token })
+          : Promise.resolve({ items: [] })
       ]);
       setInstitutions(institutionResult.items);
       setPlacements(placementResult.items);
+      setAuditEvents(auditResult.items);
+      setRoles(rolesResult.items);
     } catch (error) {
       handleApiError(error, auth.clearSession, setMessage);
     }
@@ -623,8 +879,63 @@ function TreasuryWorkspace() {
     }
   }
 
+  async function createUser(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    try {
+      await apiRequest("/api/v1/platform/users", {
+        method: "POST",
+        token: auth.token,
+        idempotent: true,
+        body: JSON.stringify(userForm)
+      });
+      setUserForm(emptyUserForm);
+      setMessage({
+        type: "success",
+        text: "Utilisateur créé. Aucune permission métier n'est attribuée automatiquement."
+      });
+      await load();
+    } catch (error) {
+      handleApiError(error, auth.clearSession, setMessage);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <>
+      <section className="panel module-home">
+        <div>
+          <p className="eyebrow">LOT 1 — TRÉSORERIE</p>
+          <h2>Modules opérationnels connectés au backend</h2>
+          <p className="muted">
+            Cette vue affiche uniquement les fonctions réellement reliées à l'API, aux permissions et à l'audit.
+            Les modules DAO non couverts par une route backend ne sont pas présentés comme utilisables.
+          </p>
+        </div>
+        <div className="kpi-grid">
+          <div className="kpi-card">
+            <span>Institutions financières</span>
+            <strong>{institutions.length}</strong>
+            <small>Données lues depuis /api/v1/treasury/institutions</small>
+          </div>
+          <div className="kpi-card">
+            <span>Placements</span>
+            <strong>{placements.length}</strong>
+            <small>Données lues depuis /api/v1/treasury/placements</small>
+          </div>
+          <div className="kpi-card">
+            <span>Rôles proposés</span>
+            <strong>{roles.length}</strong>
+            <small>Proposition KCI — à valider PAOMA</small>
+          </div>
+          <div className="kpi-card">
+            <span>Audit consultable</span>
+            <strong>{auditEvents.length}</strong>
+            <small>Derniers événements chargés depuis l'API</small>
+          </div>
+        </div>
+      </section>
       <nav className="tabs" aria-label="Modules de trésorerie">
         <button className={tab === "placements" ? "active" : ""} onClick={() => setTab("placements")}>
           Placements
@@ -632,9 +943,25 @@ function TreasuryWorkspace() {
         <button className={tab === "institutions" ? "active" : ""} onClick={() => setTab("institutions")}>
           Institutions
         </button>
+        <button className={tab === "roles" ? "active" : ""} onClick={() => setTab("roles")}>
+          Rôles &amp; habilitations
+        </button>
+        <button className={tab === "clarifications" ? "active" : ""} onClick={() => setTab("clarifications")}>
+          Points à clarifier
+        </button>
+        <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
+          Utilisateurs
+        </button>
+        <button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
+          Audit
+        </button>
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "institutions" ? (
+      {tab === "roles" ? (
+        <TreasuryRolesHabilitations roles={roles} />
+      ) : tab === "clarifications" ? (
+        <TreasuryPointsAClarifier />
+      ) : tab === "institutions" ? (
         <div className="grid">
           {auth.hasPermission("treasury:institutions:write") && (
             <section className="panel">
@@ -673,6 +1000,63 @@ function TreasuryWorkspace() {
             )}
           </section>
         </div>
+      ) : tab === "users" ? (
+        <div className="grid">
+          {auth.hasPermission("platform:users:manage") ? (
+            <section className="panel">
+              <h2>Créer un utilisateur technique</h2>
+              <Message type="info">La création ne donne aucun droit automatiquement. Les habilitations contractuelles restent à valider.</Message>
+              <form onSubmit={createUser}>
+                <label>Adresse e-mail
+                  <input type="email" required value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} />
+                </label>
+                <label>Nom affiché
+                  <input required maxLength={200} value={userForm.displayName} onChange={(event) => setUserForm({ ...userForm, displayName: event.target.value })} />
+                </label>
+                <label>Mot de passe temporaire
+                  <input type="password" required minLength={12} value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} />
+                </label>
+                <label className="check-row">
+                  <input type="checkbox" checked={userForm.mustChangePassword} onChange={(event) => setUserForm({ ...userForm, mustChangePassword: event.target.checked })} />
+                  Changement obligatoire au premier accès
+                </label>
+                <button className="primary" disabled={loading} type="submit">Créer l'utilisateur</button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel"><Message type="info">Votre compte n'a pas la permission de créer des utilisateurs.</Message></section>
+          )}
+          <section className="panel">
+            <h2>Règle d'habilitation</h2>
+            <p className="muted">Aucun profil PAOMA définitif n'est attribué automatiquement. Les droits doivent rester explicitement validés.</p>
+          </section>
+        </div>
+      ) : tab === "audit" ? (
+        <section className="panel">
+          <h2>Derniers événements d'audit</h2>
+          {!auth.hasPermission("platform:audit:read") ? (
+            <Message type="info">Votre compte n'a pas la permission de consulter l'audit.</Message>
+          ) : auditEvents.length === 0 ? (
+            <p className="empty">Aucun événement d'audit disponible.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Action</th><th>Objet</th><th>Identifiant</th><th>Utilisateur</th></tr></thead>
+                <tbody>
+                  {auditEvents.map((event) => (
+                    <tr key={event.id}>
+                      <td>{new Date(event.occurredAt).toLocaleString()}</td>
+                      <td>{event.action}</td>
+                      <td>{event.objectType}</td>
+                      <td>{event.objectId ?? "—"}</td>
+                      <td>{event.actorUserId ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       ) : (
         <div className="grid">
           {auth.hasPermission("treasury:placements:write") && (
@@ -744,6 +1128,108 @@ function TreasuryWorkspace() {
         </div>
       )}
     </>
+  );
+}
+
+function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
+  const filtered = roles.filter((r) => r.lot === "common" || r.lot === "lot1");
+  const byLot = (l: string) => filtered.filter((r) => r.lot === l);
+
+  return (
+    <section className="panel">
+      <h2>Rôles &amp; habilitations</h2>
+      <div className="roles-table-notice">
+        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
+        Le DAO reste la référence contractuelle.
+      </div>
+      {(["common", "lot1"] as const).map((l) => {
+        const items = byLot(l);
+        if (items.length === 0) return null;
+        return (
+          <div key={l} className="roles-lot-group">
+            <h3 className="roles-lot-heading">
+              {l === "common" ? "Commun (Lot 1 & 2)" : "Lot 1 — Trésorerie"}
+            </h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Libellé</th>
+                    <th>Périmètre</th>
+                    <th>Description</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((role) => (
+                    <tr key={role.code}>
+                      <td><code>{role.code}</code></td>
+                      <td>{role.label}</td>
+                      <td>{role.scopeType}</td>
+                      <td>{role.description ?? "—"}</td>
+                      <td><span className="badge warning">Proposition à valider</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+      {filtered.length === 0 && (
+        <Message type="info">Les rôles ne sont pas encore chargés. Vérifiez que vous avez la permission platform:roles:read.</Message>
+      )}
+    </section>
+  );
+}
+
+const treasuryClarifications = [
+  { num: 1, title: "Matrice des rôles Lot 1", statut: "à clarifier", contenu: "Profils Lot 1 (directeur trésorerie, gestionnaire placement, trésorier, contrôleur), périmètres d'organe et délégations à définir contractuellement par PAOMA." },
+  { num: 2, title: "Calculs financiers placements", statut: "à clarifier", contenu: "Formules d'intérêts (exact/365, 30/360, etc.), arrondi, fiscalité et pénalités de rupture non définies dans le DAO. À valider avant activation du moteur." },
+  { num: 3, title: "Référentiel institutions financières", statut: "absent", contenu: "La liste des banques et institutions autorisées pour les placements PAOMA doit être fournie officiellement. Aucun seed métier n'est présent." },
+  { num: 4, title: "Workflows de placement", statut: "partiel", contenu: "Ouverture et annulation sont implémentés. Renouvellement, rapatriement principal/intérêts et prolongation nécessitent des règles métier validées." },
+  { num: 5, title: "Référentiel comptable trésorerie", statut: "à clarifier", contenu: "PCOP 2006 utilisé comme cadrage. Comptes, journaux et schémas débit/crédit pour placements, virements et rapprochements doivent être validés par PAOMA." },
+  { num: 6, title: "Facturation et recouvrement", statut: "absent", contenu: "Module non couvert par une route backend. CPS, modèles de factures, workflow de réclamation et règles de rapprochement à définir." },
+  { num: 7, title: "Comptes en devises", statut: "absent", contenu: "Comptes réels, taux de change, règles comptables et formats d'import bancaire à fournir par PAOMA." },
+  { num: 8, title: "Rapprochement bancaire", statut: "absent", contenu: "Formats des relevés bancaires (SWIFT, MT940, CSV banque), tolérances et règles de traitement des anomalies à définir." },
+  { num: 9, title: "Reporting réglementaire Lot 1", statut: "absent", contenu: "Modèles de rapports officiels (périodicité, format, destinataires institutionnels) non définis dans le DAO." },
+  { num: 10, title: "Interopérabilité Lot 1 / Lot 2", statut: "à clarifier", contenu: "Les flux AC (accusés de crédit), rapatriements et virements entre trésorerie centrale et agences nécessitent une définition contractuelle des interfaces." }
+];
+
+function TreasuryPointsAClarifier() {
+  const [open, setOpen] = useState<number | null>(null);
+
+  return (
+    <section className="panel">
+      <h2>Points à clarifier avec PAOMA — Lot 1 Trésorerie</h2>
+      <p className="muted">
+        Ces points sont des blocages ou propositions identifiés lors de l'analyse du DAO Lot 1.
+        Ils ne peuvent pas être traités sans décision formelle de PAOMA.
+      </p>
+      <Message type="info">
+        Le DAO reste la référence contractuelle. Aucune de ces propositions n'est implémentée comme règle définitive.
+      </Message>
+      {treasuryClarifications.map((section) => (
+        <div className="clarify-section" key={section.num}>
+          <div
+            className="clarify-section-header"
+            onClick={() => setOpen(open === section.num ? null : section.num)}
+          >
+            <h3>{section.num}. {section.title}</h3>
+            <div className="clarify-section-actions">
+              <span className="badge warning">{section.statut}</span>
+              <span>{open === section.num ? "▲" : "▼"}</span>
+            </div>
+          </div>
+          {open === section.num && (
+            <div className="clarify-section-body">
+              <p>{section.contenu}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
   );
 }
 

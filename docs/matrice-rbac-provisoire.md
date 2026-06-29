@@ -37,6 +37,34 @@ Règles générales :
 | Lot 2 | Responsable régional | Supervision régionale | Proposition KCI à valider |
 | Lot 2 | Superviseur opérations | Pilotage opérations | Proposition KCI à valider |
 
+## Rôles techniques implémentés (migration 0007 — branche demo-paoma-agences-roles-operationnel)
+
+Table `platform.rbac_role_templates` créée. 19 rôles insérés, tous avec `status = 'proposition_a_valider'`.
+
+| Code | Libellé | Lot | Scope | Statut |
+|---|---|---|---|---|
+| dg | Directeur Général | common | global | Proposition KCI à valider |
+| dga | Directeur Général Adjoint | common | global | Proposition KCI à valider |
+| auditeur_interne | Auditeur Interne | common | global | Proposition KCI à valider |
+| responsable_conformite | Responsable Conformité | common | global | Proposition KCI à valider |
+| admin_systeme | Administrateur Système | common | global | Proposition KCI à valider |
+| responsable_reporting | Responsable Reporting | common | global | Proposition KCI à valider |
+| lecteur_audit | Lecteur Audit | common | global | Proposition KCI à valider |
+| directeur_tresorerie | Directeur Trésorerie | lot1 | direction | Proposition KCI à valider |
+| gestionnaire_placement | Gestionnaire Placements | lot1 | organ | Proposition KCI à valider |
+| tresorier | Trésorier | lot1 | organ | Proposition KCI à valider |
+| controleur_financier | Contrôleur Financier | lot1 | organ | Proposition KCI à valider |
+| directeur_operations | Directeur Opérations | lot2 | direction | Proposition KCI à valider |
+| chef_agence | Chef d'Agence | lot2 | agency | Proposition KCI à valider |
+| gestionnaire_agence | Gestionnaire Agence | lot2 | agency | Proposition KCI à valider |
+| agent_guichet | Agent de Guichet | lot2 | counter | Proposition KCI à valider |
+| agent_courrier | Agent Courrier | lot2 | agency | Proposition KCI à valider |
+| agent_financier | Agent Financier Postal | lot2 | counter | Proposition KCI à valider |
+| superviseur_regional | Superviseur Régional | lot2 | direction | Proposition KCI à valider |
+| chef_district | Chef de District Postal | lot2 | direction | Proposition KCI à valider |
+
+API disponible : `GET /api/v1/platform/roles` (permission `platform:roles:read` requise)
+
 ## Points à confirmer
 
 1. Profils exacts et libellés officiels.
@@ -47,3 +75,4 @@ Règles générales :
 6. Droits de postage comptable et de contrepassation.
 7. Droits de consultation des pièces sensibles.
 8. Droits sur sauvegarde, restauration, audit et sécurité.
+9. Matrice rôles ↔ permissions (table `platform.rbac_role_permissions` prête, liaisons à valider).

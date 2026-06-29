@@ -22,3 +22,9 @@ playwright-report/
 *.pfx
 .DS_Store
 Thumbs.db
+
+# Artefacts de vérification sandbox (non supprimables sur le mount Windows)
+.claude/
+apps/api/boot-probe.cjs
+apps/api/verify-e2e.cjs
+apps/api/__wtest

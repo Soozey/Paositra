@@ -1,5 +1,7 @@
 # Cadrage comptable PCOP 2006 pour PAOMA
 
+> **Mis à jour : migration 0007 — traçabilité source ajoutée. Statut global : `cadrage provisoire`.**
+
 Référence contractuelle principale : `DAOO n°26/005-PAOSITRA/DG/PRMP/AOO`.
 
 Le DAO constitue la base contractuelle du projet. Le PCOP 2006 est utilisé

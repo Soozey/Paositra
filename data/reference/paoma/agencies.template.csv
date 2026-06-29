@@ -1,0 +1,8 @@
+public_code,codique,name,type,region,district,commune,city,address,latitude,longitude,source_type,source_name,source_url,source_note,validation_status
+# TEMPLATE — Colonnes du référentiel agences PAOMA
+# source_type : paoma_validated | public_source | demo_only | to_validate
+# validation_status : to_validate | validated | rejected
+# type : direction | agence_principale | agence_secondaire | bureau | point_service | guichet_financier
+# Ce fichier est un modèle vide. Toute donnée importée doit être validée par PAOMA avant usage en production.
+# Exemple (supprimer avant import réel) :
+# 101,AG-ANT-001,Agence Principale Analakely,agence_principale,Analamanga,Antananarivo Avaradrano,Antananarivo I,Antananarivo,"Rue de l'Indépendance",-18.9101,47.5361,to_validate,,,"Données de démonstration à valider",to_validate
