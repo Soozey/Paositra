@@ -182,16 +182,22 @@ export class IdempotencyKey {
   requestHash!: string;
 
   @Column({ length: 20 })
-  state!: "processing" | "completed";
+  state!: "processing" | "completed" | "failed" | "expired";
 
   @Column({ name: "response_status", type: "integer", nullable: true })
   responseStatus!: number | null;
 
   @Column({ name: "response_body", type: "jsonb", nullable: true })
-  responseBody!: unknown;
+  responseBody!: unknown | null;
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
+
+  @UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
+  updatedAt!: Date;
+
+  @Column({ name: "failed_at", type: "timestamptz", nullable: true })
+  failedAt!: Date | null;
 
   @Column({ name: "expires_at", type: "timestamptz" })
   expiresAt!: Date;
@@ -255,7 +261,7 @@ export class Placement {
   startDate!: string;
 
   @Column({ length: 20, default: "open" })
-  status!: "open" | "cancelled" | "closed";
+  status!: "open" | "cancelled" | "closed" | "renewed" | "repatriated";
 
   @Column({ name: "cancellation_reason", type: "text", nullable: true })
   cancellationReason!: string | null;
@@ -355,6 +361,88 @@ export class Agency {
 
   @VersionColumn()
   version!: number;
+
+  // Source tracking (migration 0007)
+  @Column({ name: "public_code", type: "varchar", length: 20, nullable: true })
+  publicCode!: string | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  codique!: string | null;
+
+  @Column({ name: "temporary_code", type: "varchar", length: 50, nullable: true })
+  temporaryCode!: string | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  type!: string | null;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  region!: string | null;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  district!: string | null;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  commune!: string | null;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  city!: string | null;
+
+  @Column({ type: "text", nullable: true })
+  address!: string | null;
+
+  @Column({ type: "numeric", precision: 10, scale: 7, nullable: true })
+  latitude!: string | null;
+
+  @Column({ type: "numeric", precision: 10, scale: 7, nullable: true })
+  longitude!: string | null;
+
+  @Column({ name: "source_type", length: 30, default: "to_validate" })
+  sourceType!: string;
+
+  @Column({ name: "source_name", type: "varchar", length: 200, nullable: true })
+  sourceName!: string | null;
+
+  @Column({ name: "source_url", type: "varchar", length: 500, nullable: true })
+  sourceUrl!: string | null;
+
+  @Column({ name: "source_note", type: "text", nullable: true })
+  sourceNote!: string | null;
+
+  @Column({ name: "validation_status", length: 20, default: "to_validate" })
+  validationStatus!: string;
+
+  @Column("uuid", { name: "validated_by", nullable: true })
+  validatedBy!: string | null;
+
+  @Column({ name: "validated_at", type: "timestamptz", nullable: true })
+  validatedAt!: Date | null;
+}
+
+@Entity({ schema: "platform", name: "rbac_role_templates" })
+export class RbacRoleTemplate {
+  @PrimaryColumn("uuid")
+  id!: string;
+
+  @Column({ length: 80, unique: true })
+  code!: string;
+
+  @Column({ length: 200 })
+  label!: string;
+
+  @Column({ length: 20 })
+  lot!: string;
+
+  @Column({ name: "scope_type", length: 30 })
+  scopeType!: string;
+
+  @Column({ type: "text", nullable: true })
+  description!: string | null;
+
+  @Column({ length: 30, default: "proposition_a_valider" })
+  status!: string;
+
+  @CreateDateColumn({ name: "created_at", type: "timestamptz" })
+  createdAt!: Date;
 }
 
 export const entities = [
@@ -368,5 +456,6 @@ export const entities = [
   Institution,
   Placement,
   PlacementHistory,
-  Agency
+  Agency,
+  RbacRoleTemplate
 ];

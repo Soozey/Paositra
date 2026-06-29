@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable
 } from "@nestjs/common";
@@ -7,13 +6,9 @@ import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
-import { In, Repository } from "typeorm";
+import { Repository } from "typeorm";
 import type { AuthenticatedUser } from "../common/request-context";
-import {
-  Permission,
-  User,
-  UserPermission
-} from "../database/entities";
+import { User } from "../database/entities";
 import { AuditService } from "./audit.service";
 import { CreateUserDto } from "./users.dto";
 import { validatePasswordPolicy } from "../auth/password-policy";
@@ -23,8 +18,6 @@ export class UsersService {
   constructor(
     private readonly config: ConfigService,
     @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(Permission)
-    private readonly permissions: Repository<Permission>,
     private readonly audit: AuditService
   ) {}
 
@@ -46,15 +39,6 @@ export class UsersService {
       throw new ConflictException("Un utilisateur utilise déjà cette adresse.");
     }
 
-    const knownPermissions = await this.permissions.findBy({
-      code: In(dto.permissionCodes)
-    });
-    if (knownPermissions.length !== dto.permissionCodes.length) {
-      throw new BadRequestException(
-        "Une ou plusieurs habilitations demandées sont inconnues."
-      );
-    }
-
     const user = this.users.create({
       id: randomUUID(),
       email,
@@ -67,19 +51,6 @@ export class UsersService {
 
     await this.users.manager.transaction(async (manager) => {
       await manager.save(user);
-      if (dto.permissionCodes.length) {
-        await manager.insert(
-          UserPermission,
-          dto.permissionCodes.map((permissionCode) => ({
-            id: randomUUID(),
-            userId: user.id,
-            permissionCode,
-            scopeType: "global",
-            scopeId: null,
-            grantedBy: actor.id
-          }))
-        );
-      }
       await this.audit.record(manager, {
         actorUserId: actor.id,
         sessionId: actor.sessionId,
@@ -88,8 +59,7 @@ export class UsersService {
         objectId: user.id,
         afterState: {
           email: user.email,
-          displayName: user.displayName,
-          permissionCodes: dto.permissionCodes
+          displayName: user.displayName
         },
         ...context
       });
@@ -100,7 +70,7 @@ export class UsersService {
       email: user.email,
       displayName: user.displayName,
       mustChangePassword: user.mustChangePassword,
-      permissionCodes: dto.permissionCodes
+      permissionCodes: []
     };
   }
 

@@ -1,10 +1,10 @@
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { ProblemDetailsFilter } from "./common/problem-details.filter";
+import { configureOpenApiUi } from "./openapi";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -35,19 +35,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   if (config.get<string>("NODE_ENV") !== "production") {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle("PAOSITRA - API de gestion")
-      .setDescription(
-        "API versionnée des lots Trésorerie et Gestion des opérations"
-      )
-      .setVersion("0.1.0")
-      .addBearerAuth()
-      .build();
-    SwaggerModule.setup(
-      "api/docs",
-      app,
-      SwaggerModule.createDocument(app, swaggerConfig)
-    );
+    configureOpenApiUi(app);
   }
 
   await app.listen(config.getOrThrow<number>("PORT"), "0.0.0.0");

@@ -10,7 +10,7 @@ import {
   Req,
   UseInterceptors
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiTags } from "../common/api-docs.decorators";
 import type { AuthenticatedRequest } from "../common/request-context";
 import { requestMetadata } from "../common/request-context";
 import { PaginationDto } from "../common/pagination.dto";

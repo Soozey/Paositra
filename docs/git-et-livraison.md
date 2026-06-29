@@ -56,3 +56,47 @@ git push -u origin main
 - Audit append-only : modification refusée.
 - Sauvegarde/restauration : syntaxe des scripts validée; restauration non exécutée.
 - Validation visuelle : non exécutée, navigateur intégré indisponible.
+
+## Branche de démonstration provisoire
+
+- Branche de travail : `demo-presentation-dao`.
+- Branche source : `jalon-1-socle-securise`.
+- Objectif : présenter le socle, la séparation Lot 1 / Lot 2, les écrans DAO
+  visibles, les états vides, l'audit, l'OpenAPI et les limites à clarifier.
+- Mode démo : activé uniquement par `VITE_DEMO_MODE=true`.
+- Mode démo par défaut : désactivé dans `.env.example` et `docker-compose.yml`.
+- Données métier : aucune donnée métier persistante ajoutée; aucun seed métier
+  ajouté aux migrations.
+- Compte local : provisionnement manuel contrôlé uniquement pour la base Docker
+  éphémère de démonstration; aucun mot de passe réel n'est commité.
+- Captures : non produites automatiquement si le connecteur navigateur n'est pas
+  disponible.
+- Validation du 2026-06-16 : typecheck, build, tests unitaires, tests frontend,
+  tests PostgreSQL intégrés, génération OpenAPI, contrôle OpenAPI et `npm audit`
+  réussis.
+- Sécurité dépendances : `npm audit --audit-level=moderate` indique zéro
+  vulnérabilité connue après retrait de Swagger runtime et migration des tests
+  API vers Vitest.
+
+Commandes de lancement de la démo :
+
+```powershell
+$env:POSTGRES_ADMIN_PASSWORD="replace-with-local-admin-password"
+$env:PAOSITRA_OWNER_PASSWORD="replace-with-local-owner-password"
+$env:PAOSITRA_APP_PASSWORD="replace-with-local-app-password"
+$env:JWT_SECRET="replace-with-at-least-32-random-characters"
+$env:VITE_DEMO_MODE="true"
+docker compose -p paositra-jalon1 up --build -d
+```
+
+Commandes d'arrêt :
+
+```powershell
+docker compose -p paositra-jalon1 down
+```
+
+Suppression volontaire de la base éphémère de démonstration uniquement :
+
+```powershell
+docker compose -p paositra-jalon1 down -v
+```

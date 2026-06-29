@@ -23,4 +23,4 @@ COPY --from=build /app/apps/api/dist apps/api/dist
 COPY scripts scripts
 COPY database database
 USER node
-CMD ["sh", "-c", "node scripts/migrate.mjs && node apps/api/dist/main.js"]
+CMD ["node", "apps/api/dist/main.js"]

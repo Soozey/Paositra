@@ -3,6 +3,7 @@ import {
   type FormEvent,
   type PropsWithChildren,
   useContext,
+  useEffect,
   useMemo,
   useState
 } from "react";
@@ -27,7 +28,10 @@ interface AuthState {
   user: CurrentUser | null;
   setSession: (token: string, user: CurrentUser) => void;
   clearSession: () => void;
-  hasPermission: (permission: string) => boolean;
+  hasPermission: (
+    permission: string,
+    scope?: { type: Exclude<string, "global">; id: string }
+  ) => boolean;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -82,6 +86,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return saved ? (JSON.parse(saved) as CurrentUser) : null;
   });
 
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    async function refreshUser() {
+      try {
+        const refreshed = await apiRequest<CurrentUser>("/api/v1/auth/me", {
+          token
+        });
+        if (!cancelled && isCurrentUser(refreshed)) {
+          sessionStorage.setItem("paositra_user", JSON.stringify(refreshed));
+          setUser(refreshed);
+        }
+      } catch (error) {
+        if (!cancelled && error instanceof ApiError && error.status === 401) {
+          sessionStorage.removeItem("paositra_access_token");
+          sessionStorage.removeItem("paositra_user");
+          setToken(null);
+          setUser(null);
+        }
+      }
+    }
+    void refreshUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   const value = useMemo<AuthState>(
     () => ({
       token,
@@ -98,11 +131,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setToken(null);
         setUser(null);
       },
-      hasPermission: (permission) =>
+      hasPermission: (permission, scope) =>
         Boolean(
           user?.permissions.some(
             (entry) =>
-              entry.code === permission && entry.scopeType === "global"
+              entry.code === permission &&
+              ((entry.scopeType === "global" && entry.scopeId === null) ||
+                (scope &&
+                  entry.scopeType === scope.type &&
+                  entry.scopeId === scope.id))
           )
         )
     }),
@@ -110,6 +147,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function isCurrentUser(value: unknown): value is CurrentUser {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "email" in value &&
+    "displayName" in value &&
+    "sessionId" in value &&
+    "permissions" in value &&
+    Array.isArray((value as CurrentUser).permissions)
+  );
 }
 
 export function useAuth() {
@@ -153,6 +203,7 @@ export function LoginPage({ applicationName }: { applicationName: string }) {
 
   return (
     <main className="login-page">
+      <DemoBanner />
       <section className="login-card" aria-labelledby="login-title">
         <p className="eyebrow">PAOSITRA MALAGASY</p>
         <h1 id="login-title">{applicationName}</h1>
@@ -231,6 +282,7 @@ export function ChangePasswordPage({
 
   return (
     <main className="login-page">
+      <DemoBanner />
       <section className="login-card" aria-labelledby="password-title">
         <p className="eyebrow">PAOSITRA MALAGASY</p>
         <h1 id="password-title">{applicationName}</h1>
@@ -302,6 +354,7 @@ export function AppShell({
 
   return (
     <div className="app-shell">
+      <DemoBanner />
       <header className="topbar">
         <div>
           <p className="eyebrow">PAOSITRA MALAGASY</p>
@@ -315,6 +368,15 @@ export function AppShell({
         </div>
       </header>
       <main className="content">{children}</main>
+    </div>
+  );
+}
+
+export function DemoBanner() {
+  return (
+    <div className="demo-banner" role="note">
+      ⚠️ ENVIRONNEMENT DE DÉMONSTRATION — Données non contractuelles — KCI /
+      Soozey SARL
     </div>
   );
 }

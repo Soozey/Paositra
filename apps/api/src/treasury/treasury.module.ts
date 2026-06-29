@@ -7,12 +7,20 @@ import {
 } from "../database/entities";
 import { TreasuryController } from "./treasury.controller";
 import { TreasuryService } from "./treasury.service";
+import { PlacementInsightsController } from "./placement-insights";
+import { PlacementLifecycleController } from "./placement-lifecycle";
+import { BillingController } from "./billing";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Institution, Placement, PlacementHistory])
   ],
-  controllers: [TreasuryController],
+  controllers: [
+    TreasuryController,
+    PlacementInsightsController,
+    PlacementLifecycleController,
+    BillingController
+  ],
   providers: [TreasuryService]
 })
 export class TreasuryModule {}

@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "../common/api-docs.decorators";
 import { Type } from "class-transformer";
 import {
   IsBoolean,

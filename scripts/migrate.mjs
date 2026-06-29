@@ -3,9 +3,10 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import pg from "pg";
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl =
+  process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
+  throw new Error("MIGRATION_DATABASE_URL or DATABASE_URL is required");
 }
 
 const migrationsDir = path.resolve("database", "migrations");

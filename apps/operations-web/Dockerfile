@@ -10,7 +10,9 @@ COPY tsconfig.base.json ./
 COPY packages/web-core packages/web-core
 COPY apps/operations-web apps/operations-web
 ARG VITE_API_URL
+ARG VITE_DEMO_MODE=false
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_DEMO_MODE=$VITE_DEMO_MODE
 RUN npm run build -w @paositra/operations-web
 
 FROM nginx:1.28.0-alpine

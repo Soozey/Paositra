@@ -4,12 +4,24 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
+  Res,
+  UploadedFile,
   UseInterceptors
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import type { Response } from "express";
+
+interface MulterFile {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+  size: number;
+}
+import { ApiBearerAuth, ApiTags } from "../common/api-docs.decorators";
 import type { AuthenticatedRequest } from "../common/request-context";
 import { requestMetadata } from "../common/request-context";
 import { IdempotencyInterceptor } from "../platform/idempotency.interceptor";
@@ -17,7 +29,8 @@ import { RequirePermission } from "../platform/rbac";
 import {
   AgencyQueryDto,
   CloseAgencyDto,
-  CreateAgencyDto
+  CreateAgencyDto,
+  ValidateAgencyDto
 } from "./operations.dto";
 import { OperationsService } from "./operations.service";
 
@@ -31,6 +44,18 @@ export class OperationsController {
   @RequirePermission("operations:agencies:read")
   listAgencies(@Query() query: AgencyQueryDto) {
     return this.operations.listAgencies(query);
+  }
+
+  @Get("agencies/export")
+  @RequirePermission("operations:agencies:export")
+  async exportAgencies(@Res() res: Response) {
+    const csv = await this.operations.exportAgencies();
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="agences-paoma-${new Date().toISOString().slice(0, 10)}.csv"`
+    );
+    res.send(csv);
   }
 
   @Post("agencies")
@@ -47,8 +72,37 @@ export class OperationsController {
     );
   }
 
+  @Post("agencies/import")
+  @RequirePermission("operations:agencies:import")
+  @UseInterceptors(FileInterceptor("file"))
+  importAgencies(
+    @UploadedFile() file: MulterFile,
+    @Req() request: AuthenticatedRequest
+  ) {
+    return this.operations.importAgencies(file, request.user, requestMetadata(request));
+  }
+
+  @Patch("agencies/:id/validate")
+  @RequirePermission("operations:agencies:validate")
+  @UseInterceptors(IdempotencyInterceptor)
+  validateAgency(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: ValidateAgencyDto,
+    @Req() request: AuthenticatedRequest
+  ) {
+    return this.operations.validateAgency(
+      id,
+      dto,
+      request.user,
+      requestMetadata(request)
+    );
+  }
+
   @Post("agencies/:id/close")
-  @RequirePermission("operations:agencies:close")
+  @RequirePermission("operations:agencies:close", {
+    type: "agency",
+    routeParam: "id"
+  })
   @UseInterceptors(IdempotencyInterceptor)
   closeAgency(
     @Param("id", ParseUUIDPipe) id: string,

@@ -77,6 +77,56 @@ Le script de bootstrap est désactivé par défaut. Son exécution exige
 liste explicite de permissions techniques préalablement approuvées. Il ne crée
 aucun compte automatiquement au démarrage.
 
+## OpenAPI
+
+L'artefact versionné se génère avec :
+
+```powershell
+npm run openapi:generate
+npm run openapi:check
+```
+
+La génération produit un artefact statique versionné et ne nécessite pas de
+connexion PostgreSQL.
+
+En mode Docker de production, Swagger UI n'est pas exposé. L'artefact généré
+est `docs/openapi/openapi.json`.
+
+## Démo locale isolée
+
+La pile isolée du Jalon 1 se lance sans réutiliser le volume du projet parent :
+
+```powershell
+$env:POSTGRES_ADMIN_PASSWORD="replace-with-local-admin-password"
+$env:PAOSITRA_OWNER_PASSWORD="replace-with-local-owner-password"
+$env:PAOSITRA_APP_PASSWORD="replace-with-local-app-password"
+$env:JWT_SECRET="replace-with-at-least-32-random-characters"
+$env:VITE_DEMO_MODE="true"
+docker compose -p paositra-jalon1 up --build -d
+```
+
+URLs locales :
+
+- API : `http://127.0.0.1:3000`
+- Lot 1 Trésorerie : `http://127.0.0.1:8080`
+- Lot 2 Opérations : `http://127.0.0.1:8081`
+
+Arrêt de la pile isolée :
+
+```powershell
+docker compose -p paositra-jalon1 down
+```
+
+Suppression volontaire des volumes isolés de cette démo uniquement :
+
+```powershell
+docker compose -p paositra-jalon1 down -v
+```
+
+Le mode `VITE_DEMO_MODE=true` active une présentation provisoire avec la
+bannière `DÉMONSTRATION PROVISOIRE — NON CONTRACTUELLE`. Il est désactivé par
+défaut dans `.env.example` et ne crée aucune donnée métier persistante.
+
 ## Vérifications
 
 ```powershell
@@ -86,9 +136,8 @@ npm run test
 npm audit
 ```
 
-Aucun test frontend réel n'est présent. Les scripts frontend utilisent encore
-`--passWithNoTests`; leur succès ne constitue donc pas une preuve de test
-frontend.
+Des tests frontend minimaux réels sont présents pour les deux lots. Ils ne
+créent aucune donnée métier.
 
 ## Gouvernance
 
@@ -97,3 +146,4 @@ frontend.
 - Décisions : [`docs/decisions-techniques.md`](docs/decisions-techniques.md)
 - Clarifications : [`docs/a-clarifier.md`](docs/a-clarifier.md)
 - Git et livraison : [`docs/git-et-livraison.md`](docs/git-et-livraison.md)
+- Inventaire des écrans DAO : [`docs/inventaire-ecrans-dao.md`](docs/inventaire-ecrans-dao.md)
