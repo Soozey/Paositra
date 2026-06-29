@@ -766,7 +766,7 @@ function DemoPreview({
 
 function TreasuryWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"institutions" | "placements" | "roles" | "clarifications" | "users" | "audit">("placements");
+  const [tab, setTab] = useState<"institutions" | "placements" | "receivables" | "roles" | "clarifications" | "users" | "audit">("placements");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -1021,6 +1021,9 @@ function TreasuryWorkspace() {
         <button className={tab === "placements" ? "active" : ""} onClick={() => setTab("placements")}>
           Placements
         </button>
+        <button className={tab === "receivables" ? "active" : ""} onClick={() => setTab("receivables")}>
+          Créances
+        </button>
         <button className={tab === "institutions" ? "active" : ""} onClick={() => setTab("institutions")}>
           Institutions
         </button>
@@ -1038,7 +1041,9 @@ function TreasuryWorkspace() {
         </button>
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "roles" ? (
+      {tab === "receivables" ? (
+        <TreasuryReceivables />
+      ) : tab === "roles" ? (
         <TreasuryRolesHabilitations roles={roles} />
       ) : tab === "clarifications" ? (
         <TreasuryPointsAClarifier />
@@ -1348,4 +1353,151 @@ function handleApiError(
     type: "error",
     text: error instanceof Error ? error.message : "L'action n'a pas pu être effectuée."
   });
+}
+
+
+interface Receivable {
+  id: string;
+  reference: string;
+  debtorName: string;
+  amount: string;
+  currency: string;
+  issueDate: string;
+  dueDate: string;
+  status: "en_cours" | "relancee" | "virement_recu" | "cloturee" | "contentieux";
+  version: number;
+}
+
+const emptyReceivable = { debtorName: "", amount: "", currency: "MGA", issueDate: "", dueDate: "", description: "" };
+
+function receivableStatusLabel(s: Receivable["status"]) {
+  return s === "en_cours" ? "En cours" : s === "relancee" ? "Relancée" : s === "virement_recu" ? "Virement reçu" : s === "cloturee" ? "Clôturée" : "Contentieux";
+}
+
+function TreasuryReceivables() {
+  const auth = useAuth();
+  const [items, setItems] = useState<Receivable[]>([]);
+  const [form, setForm] = useState(emptyReceivable);
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const canWrite = auth.hasPermission("treasury:receivables:write");
+
+  const load = useCallback(async () => {
+    if (!auth.hasPermission("treasury:receivables:read")) return;
+    try {
+      const r = await apiRequest<{ items: Receivable[] }>("/api/v1/treasury/receivables?pageSize=100", { token: auth.token });
+      setItems(r.items);
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
+  }, [auth]);
+  useEffect(() => { void load(); }, [load]);
+
+  async function create(event: FormEvent) {
+    event.preventDefault(); setLoading(true);
+    try {
+      await apiRequest("/api/v1/treasury/receivables", {
+        method: "POST", token: auth.token, idempotent: true,
+        body: JSON.stringify({ ...form, currency: form.currency.toUpperCase() })
+      });
+      setForm(emptyReceivable);
+      setMessage({ type: "success", text: "Créance enregistrée." });
+      await load();
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
+    finally { setLoading(false); }
+  }
+
+  async function act(r: Receivable, kind: "relance" | "virement" | "close") {
+    try {
+      let body: Record<string, unknown> = { version: r.version };
+      if (kind === "relance") {
+        const comment = window.prompt("Commentaire de relance :")?.trim(); if (!comment) return;
+        const mode = window.prompt("Mode (courrier, e-mail, téléphone) :")?.trim() || "courrier";
+        body = { ...body, comment, mode };
+      } else if (kind === "virement") {
+        const reference = window.prompt("Référence du virement :")?.trim(); if (!reference) return;
+        const bank = window.prompt("Banque émettrice :")?.trim() || "—";
+        const valueDate = window.prompt("Date de valeur (AAAA-MM-JJ) :")?.trim() || r.dueDate;
+        body = { ...body, reference, amount: r.amount, bank, valueDate };
+      } else {
+        const comment = window.prompt("Commentaire de clôture :")?.trim(); if (!comment) return;
+        const c = window.confirm("OK = Clôturer (soldée). Annuler = passer en contentieux.");
+        body = { ...body, comment, target: c ? "cloturee" : "contentieux" };
+      }
+      await apiRequest(`/api/v1/treasury/receivables/${r.id}/${kind}`, {
+        method: "POST", token: auth.token, idempotent: true, body: JSON.stringify(body)
+      });
+      setMessage({ type: "success", text: "Action enregistrée." });
+      await load();
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
+  }
+
+  async function download(path: string, filename: string) {
+    try {
+      const base = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || "http://localhost:3000";
+      const res = await fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+      if (!res.ok) { setMessage({ type: "error", text: "Export impossible." }); return; }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
+  }
+
+  return (
+    <div className="grid">
+      {message && <Message type={message.type}>{message.text}</Message>}
+      {canWrite && (
+        <section className="panel">
+          <h2>Nouvelle créance</h2>
+          <form onSubmit={create}>
+            <label>Débiteur<input required maxLength={240} value={form.debtorName} onChange={(e) => setForm({ ...form, debtorName: e.target.value })} /></label>
+            <label>Montant<input inputMode="decimal" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
+            <label>Devise<input maxLength={3} required value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></label>
+            <label>Date d'émission<input type="date" required value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} /></label>
+            <label>Date d'échéance<input type="date" required value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></label>
+            <label>Description<input maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+            <button className="primary" disabled={loading} type="submit">Enregistrer la créance</button>
+          </form>
+        </section>
+      )}
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Créances</h2>
+          {auth.hasPermission("treasury:receivables:export") && (
+            <div className="actions">
+              <button className="secondary" type="button" onClick={() => void download("/api/v1/treasury/receivables/report.xlsx", "etat-creances-DEMO.xlsx")}>État Excel</button>
+              <button className="secondary" type="button" onClick={() => void download("/api/v1/treasury/receivables/virements.pdf", "virements-DEMO.pdf")}>Virements PDF</button>
+            </div>
+          )}
+        </div>
+        {items.length === 0 ? <p className="empty">Aucune créance enregistrée.</p> : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Référence</th><th>Débiteur</th><th>Montant</th><th>Échéance</th><th>Statut</th><th>Actions</th></tr></thead>
+              <tbody>
+                {items.map((r) => {
+                  const overdue = r.status !== "cloturee" && r.dueDate < new Date().toISOString().slice(0, 10);
+                  return (
+                    <tr key={r.id}>
+                      <td>{r.reference}</td>
+                      <td>{r.debtorName}</td>
+                      <td>{Number(r.amount).toLocaleString("fr-FR")} {r.currency}</td>
+                      <td>{r.dueDate}{overdue ? <strong className="badge-due"> ⚠ en retard</strong> : null}</td>
+                      <td>{receivableStatusLabel(r.status)}</td>
+                      <td>
+                        {canWrite && r.status !== "cloturee" && r.status !== "contentieux" && (
+                          <div className="actions">
+                            {(r.status === "en_cours" || r.status === "relancee") && <button className="secondary" onClick={() => void act(r, "relance")}>Relancer</button>}
+                            {(r.status === "en_cours" || r.status === "relancee") && <button className="secondary" onClick={() => void act(r, "virement")}>Virement</button>}
+                            <button className="secondary" onClick={() => void act(r, "close")}>Clôturer</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
 }

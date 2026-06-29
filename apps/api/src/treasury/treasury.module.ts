@@ -9,6 +9,7 @@ import { TreasuryController } from "./treasury.controller";
 import { TreasuryService } from "./treasury.service";
 import { PlacementInsightsController } from "./placement-insights";
 import { PlacementLifecycleController } from "./placement-lifecycle";
+import { BillingController } from "./billing";
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { PlacementLifecycleController } from "./placement-lifecycle";
   controllers: [
     TreasuryController,
     PlacementInsightsController,
-    PlacementLifecycleController
+    PlacementLifecycleController,
+    BillingController
   ],
   providers: [TreasuryService]
 })
