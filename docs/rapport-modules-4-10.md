@@ -76,3 +76,30 @@ PDF ; RBAC caissier value-request→403.
 Ajouter dans treasury-web : onglets Comptes courants, Budget, Tableau de bord.
 Ajouter dans operations-web : onglets Caisses, Vérification, Tableau de bord Ops, Inter-agences,
 panneau Alertes (notifications). Les contrats API ci-dessus sont stables et prêts.
+
+---
+
+## Addendum — Frontend des modules 4 à 9 (livré)
+
+Les onglets React ont été construits en composants dédiés, câblés aux API vérifiées,
+avec gestion loading/erreur/vide (messages FR), RBAC (boutons cachés selon permissions),
+et téléchargements PDF/Excel réels. **Vérification : typecheck strict (tsc) sans erreur** sur
+les deux frontends + **smoke test API** (tous les endpoints consommés répondent 200 avec le rôle
+adapté). Le test navigateur final (clic) se fait sur la machine Windows via Docker.
+
+| Module | Onglet | App | Statut |
+|---|---|---|---|
+| 7 Caisses | « Caisses » | operations-web | ✓ (ouverture billetage, opérations, annulation, clôture, validation chef, ticket PDF) |
+| 8 Vérification | « Vérification » | operations-web | ✓ (grille écarts, accusé PDF, mise à disposition double validation) |
+| 9 Dashboards Ops | « Tableau de bord » | operations-web | ✓ (KPI + régions, export PDF) |
+| 9 Inter-agences | « Inter-agences » | operations-web | ✓ (demande G59/G60, traiter/rejeter) |
+| 9 Notifications | « Alertes » | operations-web | ✓ (badge non-lus, marquer lu) |
+| 4 Comptes courants | « Comptes courants » | treasury-web | ✓ (journal, rapprochement, chèques, exports) |
+| 5 Budget ELO-P | « Budget » | treasury-web | ✓ (exercices/lignes/dossiers, workflow piloté, exports) |
+| 6 Dashboard Trésorerie | « Tableau de bord » | treasury-web | ✓ (KPI calculés, export PDF) |
+
+Composants : operations-web → CashModule, VerificationModule, ops-extra-ui (OpsDashboard/
+ValueRequests/AlertsPanel), util. treasury-web → CurrentAccountsModule, BudgetModule,
+TreasuryDashboardModule, util. Styles ajoutés dans packages/web-core/src/styles.css.
+
+Commits frontend : 28fff33 (M7) → dernier (M6).

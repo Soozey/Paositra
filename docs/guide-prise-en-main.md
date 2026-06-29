@@ -137,3 +137,30 @@ npm run dev:api ; npm run dev:treasury ; npm run dev:operations
 - Vérificateur : enregistrer une vérification avec écart (justification obligatoire), générer
   un accusé de crédit PDF.
 - Directeur Opérations : consulter le tableau de bord et les notifications (demandes de valeurs).
+
+---
+
+## Onglets disponibles dans l'application (après démarrage)
+
+Ouvrez **http://localhost:8080** (Trésorerie) et **http://localhost:8081** (Opérations).
+
+**Lot 1 — Trésorerie** (connectez-vous : `demo.tresorier`) : onglets Placements, Créances,
+**Comptes courants**, **Budget**, **Tableau de bord**, Institutions, Rôles, Audit.
+- Comptes courants : créer un compte → « Journal » → ajouter écritures → « Rapprocher » →
+  émettre un chèque → changer son statut → exports « Journal Excel » / « Registre PDF ».
+- Budget : créer un exercice → ajouter une ligne de crédit → créer un dossier d'engagement →
+  le faire avancer (Soumettre → Vérifier → Valider → Payer → Archiver) ; un montant supérieur
+  au disponible est refusé avec un message clair. Exports « Crédits Excel » / « Bordereau PDF ».
+- Tableau de bord : indicateurs calculés + « Export PDF ».
+
+**Lot 2 — Opérations** : onglets Agences, **Caisses**, **Vérification**, **Tableau de bord**,
+**Inter-agences**, **Alertes**, Référentiel agences, Rôles.
+- Caisses (`demo.caissier1`) : « Ouvrir une caisse » (saisir le billetage) → « Opérations »
+  (enregistrer, imprimer le ticket, annuler) → « Clôturer » (billetage de fin → écart calculé).
+- Validation journée (`demo.chef.tana`) : sur une caisse clôturée, « Valider journée » la
+  verrouille (irréversible) ; « Refuser » la renvoie au caissier.
+- Vérification (`demo.verificateur`) : enregistrer une vérification (justification obligatoire
+  si écart) → « Accusé de crédit » (PDF). Mise à disposition de fonds : créer → vérifier solde →
+  autoriser (par une autre personne) → confirmer.
+- Tableau de bord / Inter-agences / Alertes (`demo.dop`) : indicateurs consolidés ; créer une
+  demande de valeurs (G59/G60) ; voir les notifications et les marquer lues.
