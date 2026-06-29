@@ -1,0 +1,94 @@
+code_provisoire,nom_poste,type_poste,region,province_historique,ville_commune,source_type,validation_status,source_note
+TMP-PF-ANA-TNR-001,Ambanidia,agence_finances,Analamanga,Antananarivo,Antananarivo,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-002,Analakely,agence_finances,Analamanga,Antananarivo,Antananarivo,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-003,Andoharanofotsy,agence_finances,Analamanga,Antananarivo,Andoharanofotsy,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-004,Andravoahangy,agence_finances,Analamanga,Antananarivo,Antananarivo,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-005,Andranonahoatra,agence_finances,Analamanga,Antananarivo,Andranonahoatra,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-006,Antanimena,agence_finances,Analamanga,Antananarivo,Antananarivo,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-007,Antaninarenina,agence_finances,Analamanga,Antananarivo,Antananarivo,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-SBN-001,Sabotsy Namehana,agence_finances,Analamanga,Antananarivo,Sabotsy Namehana,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ANA-TNR-008,67Ha,agence_finances,Analamanga,Antananarivo,Antananarivo,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-DIA-DIE-001,Poste Be,agence_finances,Diana,Antsiranana,Antsiranana,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-DIA-DIE-002,Poste La Star,agence_finances,Diana,Antsiranana,Antsiranana,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-VAK-ATB-001,Asabotsy,agence_finances,Vakinankaratra,Antananarivo,Antsirabe,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-VAK-ATB-002,Avenue,agence_finances,Vakinankaratra,Antananarivo,Antsirabe,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-MAT-FNR-001,Fianarantsoa Be,agence_finances,Haute Matsiatra,Fianarantsoa,Fianarantsoa,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-MAT-FNR-002,Tsianolondroa,agence_finances,Haute Matsiatra,Fianarantsoa,Fianarantsoa,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-FIT-MNK-001,Bureau Paositra Malagasy Manakara Be,agence_finances,Fitovinany,Fianarantsoa,Manakara,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-BOE-MJN-001,Majunga Be,agence_finances,Boeny,Mahajanga,Mahajanga,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-BOE-MJN-002,Majunga Mahabibo,agence_finances,Boeny,Mahajanga,Mahajanga,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-BOE-MJN-003,Majunga Maritime,agence_finances,Boeny,Mahajanga,Mahajanga,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ATS-TMM-001,Ambolomadinika,agence_finances,Atsinanana,Toamasina,Toamasina,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ATS-TMM-002,Anjoma,agence_finances,Atsinanana,Toamasina,Toamasina,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-ATS-TMM-003,Paositra Be,agence_finances,Atsinanana,Toamasina,Toamasina,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PF-AAD-TLE-001,Bureau Paositra Malagasy Boulevard Gallieni,agence_finances,Atsimo-Andrefana,Toliara,Toliara,public_source,to_validate,Liste publique PAOSITRA Finances - code provisoire
+TMP-PAO-ANA-TNR-001,Poste Antananarivo Antaninarenina,poste_principal,Analamanga,Antananarivo,Antananarivo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-VAK-ATB-001,Poste Antsirabe,poste_principal,Vakinankaratra,Antananarivo,Antsirabe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ITA-MIR-001,Poste Miarinarivo,poste_principal,Itasy,Antananarivo,Miarinarivo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-BON-TSR-001,Poste Tsiroanomandidy,poste_principal,Bongolava,Antananarivo,Tsiroanomandidy,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MAT-FNR-001,Poste Fianarantsoa,poste_principal,Haute Matsiatra,Fianarantsoa,Fianarantsoa,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AMO-AMB-001,Poste Ambositra,poste_principal,Amoron'i Mania,Fianarantsoa,Ambositra,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-VAT-MNJ-001,Poste Mananjary,poste_principal,Vatovavy,Fianarantsoa,Mananjary,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-FIT-MNK-001,Poste Manakara,poste_principal,Fitovinany,Fianarantsoa,Manakara,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-IHO-IHO-001,Poste Ihosy,poste_principal,Ihorombe,Fianarantsoa,Ihosy,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATA-FRF-001,Poste Farafangana,poste_principal,Atsimo-Atsinanana,Fianarantsoa,Farafangana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATS-TMM-001,Poste Toamasina,poste_principal,Atsinanana,Toamasina,Toamasina,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANJ-FEA-001,Poste Fenoarivo Atsinanana,poste_principal,Analanjirofo,Toamasina,Fenoarivo Atsinanana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ALA-ABZ-001,Poste Ambatondrazaka,poste_principal,Alaotra-Mangoro,Toamasina,Ambatondrazaka,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-BOE-MJN-001,Poste Mahajanga,poste_principal,Boeny,Mahajanga,Mahajanga,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-BET-MVT-001,Poste Maevatanana,poste_principal,Betsiboka,Mahajanga,Maevatanana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEL-MAI-001,Poste Maintirano,poste_principal,Melaky,Mahajanga,Maintirano,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SOF-ANT-001,Poste Antsohihy,poste_principal,Sofia,Mahajanga,Antsohihy,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-DIA-DIE-001,Poste Antsiranana,poste_principal,Diana,Antsiranana,Antsiranana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SAV-SAM-001,Poste Sambava,poste_principal,Sava,Antsiranana,Sambava,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AAD-TLE-001,Poste Toliara,poste_principal,Atsimo-Andrefana,Toliara,Toliara,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AND-AMB-001,Poste Ambovombe,poste_principal,Androy,Toliara,Ambovombe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANO-FTD-001,Poste Taolagnaro,poste_principal,Anosy,Toliara,Taolagnaro,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEN-MRD-001,Poste Morondava,poste_principal,Menabe,Toliara,Morondava,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANA-AMH-001,Bureau Ambohidratrimo,bureau_secondaire,Analamanga,Antananarivo,Ambohidratrimo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANA-ANJ-001,Bureau Anjozorobe,bureau_secondaire,Analamanga,Antananarivo,Anjozorobe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANA-ANZ-001,Bureau Ankazobe,bureau_secondaire,Analamanga,Antananarivo,Ankazobe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANA-MNJ-001,Bureau Manjakandriana,bureau_secondaire,Analamanga,Antananarivo,Manjakandriana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-VAK-ABL-001,Bureau Ambatolampy,bureau_secondaire,Vakinankaratra,Antananarivo,Ambatolampy,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-VAK-BTF-001,Bureau Betafo,bureau_secondaire,Vakinankaratra,Antananarivo,Betafo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ITA-ARV-001,Bureau Arivonimamo,bureau_secondaire,Itasy,Antananarivo,Arivonimamo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ITA-SVN-001,Bureau Soavinandriana,bureau_secondaire,Itasy,Antananarivo,Soavinandriana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MAT-ABL-001,Bureau Ambalavao,bureau_secondaire,Haute Matsiatra,Fianarantsoa,Ambalavao,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MAT-AMH-001,Bureau Ambohimahasoa,bureau_secondaire,Haute Matsiatra,Fianarantsoa,Ambohimahasoa,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AMO-MND-001,Bureau Manandriana,bureau_secondaire,Amoron'i Mania,Fianarantsoa,Manandriana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-VAT-NOS-001,Bureau Nosy Varika,bureau_secondaire,Vatovavy,Fianarantsoa,Nosy Varika,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-VAT-IFN-001,Bureau Ifanadiana,bureau_secondaire,Vatovavy,Fianarantsoa,Ifanadiana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATA-VNG-001,Bureau Vangaindrano,bureau_secondaire,Atsimo-Atsinanana,Fianarantsoa,Vangaindrano,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATA-VND-001,Bureau Vondrozo,bureau_secondaire,Atsimo-Atsinanana,Fianarantsoa,Vondrozo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATS-MHN-001,Bureau Mahanoro,bureau_secondaire,Atsinanana,Toamasina,Mahanoro,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATS-VTM-001,Bureau Vatomandry,bureau_secondaire,Atsinanana,Toamasina,Vatomandry,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ATS-BRK-001,Bureau Brickaville,bureau_secondaire,Atsinanana,Toamasina,Brickaville,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANJ-SIV-001,Bureau Soanierana Ivongo,bureau_secondaire,Analanjirofo,Toamasina,Soanierana Ivongo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANJ-VVT-001,Bureau Vavatenina,bureau_secondaire,Analanjirofo,Toamasina,Vavatenina,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANJ-MST-001,Bureau Sainte-Marie,bureau_secondaire,Analanjirofo,Toamasina,Nosy Boraha,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ALA-MRM-001,Bureau Moramanga,bureau_secondaire,Alaotra-Mangoro,Toamasina,Moramanga,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ALA-APF-001,Bureau Amparafaravola,bureau_secondaire,Alaotra-Mangoro,Toamasina,Amparafaravola,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-BOE-MRV-001,Bureau Marovoay,bureau_secondaire,Boeny,Mahajanga,Marovoay,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-BOE-SLL-001,Bureau Soalala,bureau_secondaire,Boeny,Mahajanga,Soalala,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEL-ATS-001,Bureau Antsalova,bureau_secondaire,Melaky,Mahajanga,Antsalova,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEL-BSL-001,Bureau Besalampy,bureau_secondaire,Melaky,Mahajanga,Besalampy,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SOF-ANL-001,Bureau Analalava,bureau_secondaire,Sofia,Mahajanga,Analalava,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SOF-BEF-001,Bureau Befandriana,bureau_secondaire,Sofia,Mahajanga,Befandriana,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SOF-MDR-001,Bureau Mandritsara,bureau_secondaire,Sofia,Mahajanga,Mandritsara,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-DIA-ABL-001,Bureau Ambilobe,bureau_secondaire,Diana,Antsiranana,Ambilobe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-DIA-ABJ-001,Bureau Ambanja,bureau_secondaire,Diana,Antsiranana,Ambanja,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-DIA-NBE-001,Bureau Nosy Be,bureau_secondaire,Diana,Antsiranana,Nosy Be,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SAV-ANT-001,Bureau Antalaha,bureau_secondaire,Sava,Antsiranana,Antalaha,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SAV-AND-001,Bureau Andapa,bureau_secondaire,Sava,Antsiranana,Andapa,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-SAV-VOH-001,Bureau Vohémar,bureau_secondaire,Sava,Antsiranana,Vohémar,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AAD-AMP-001,Bureau Ampanihy,bureau_secondaire,Atsimo-Andrefana,Toliara,Ampanihy,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AAD-MRB-001,Bureau Morombe,bureau_secondaire,Atsimo-Andrefana,Toliara,Morombe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AAD-SAK-001,Bureau Sakaraha,bureau_secondaire,Atsimo-Andrefana,Toliara,Sakaraha,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AND-BEK-001,Bureau Bekily,bureau_secondaire,Androy,Toliara,Bekily,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AND-BEL-001,Bureau Beloha,bureau_secondaire,Androy,Toliara,Beloha,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-AND-TSH-001,Bureau Tsihombe,bureau_secondaire,Androy,Toliara,Tsihombe,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANO-AMS-001,Bureau Amboasary,bureau_secondaire,Anosy,Toliara,Amboasary,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-ANO-BET-001,Bureau Betroka,bureau_secondaire,Anosy,Toliara,Betroka,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEN-BST-001,Bureau Belo sur Tsiribihina,bureau_secondaire,Menabe,Toliara,Belo sur Tsiribihina,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEN-MHB-001,Bureau Mahabo,bureau_secondaire,Menabe,Toliara,Mahabo,demo_only,to_validate,Référentiel démo - code provisoire
+TMP-PAO-MEN-MIV-001,Bureau Miandrivazo,bureau_secondaire,Menabe,Toliara,Miandrivazo,demo_only,to_validate,Référentiel démo - code provisoire
