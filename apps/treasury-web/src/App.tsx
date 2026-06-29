@@ -32,7 +32,7 @@ interface Placement {
   depositMode: string;
   interestCalculationMode: string;
   startDate: string;
-  status: "open" | "cancelled" | "closed";
+  status: "open" | "cancelled" | "closed" | "renewed" | "repatriated";
   version: number;
 }
 
@@ -776,6 +776,8 @@ function TreasuryWorkspace() {
   const [userForm, setUserForm] = useState(emptyUserForm);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [simResult, setSimResult] = useState<{ interest: number; total: number; maturityDate: string; basis: string } | null>(null);
+  const [insights, setInsights] = useState<Array<{ id: string; maturityDate: string; daysRemaining: number; maturingSoon: boolean }>>([]);
 
   const load = useCallback(async () => {
     try {
@@ -803,6 +805,17 @@ function TreasuryWorkspace() {
       setPlacements(placementResult.items);
       setAuditEvents(auditResult.items);
       setRoles(rolesResult.items);
+      if (auth.hasPermission("treasury:placements:read")) {
+        try {
+          const ins = await apiRequest<{ items: Array<{ id: string; maturityDate: string; daysRemaining: number; maturingSoon: boolean }> }>(
+            "/api/v1/treasury/placements/insights",
+            { token: auth.token }
+          );
+          setInsights(ins.items ?? []);
+        } catch {
+          /* échéancier non bloquant */
+        }
+      }
     } catch (error) {
       handleApiError(error, auth.clearSession, setMessage);
     }
@@ -900,6 +913,74 @@ function TreasuryWorkspace() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function simulate() {
+    setLoading(true);
+    try {
+      const r = await apiRequest<{ interest: number; total: number; maturityDate: string; basis: string }>(
+        "/api/v1/treasury/placements/simulate",
+        {
+          method: "POST",
+          token: auth.token,
+          body: JSON.stringify({
+            principalAmount: Number(placementForm.principalAmount),
+            annualInterestRate: Number(placementForm.annualInterestRate),
+            durationDays: Number(placementForm.durationDays),
+            basis: (placementForm.interestCalculationMode || "").includes("365") ? "365" : "360",
+            startDate: placementForm.startDate,
+            currency: placementForm.currency || "MGA"
+          })
+        }
+      );
+      setSimResult(r);
+      setMessage({ type: "success", text: `Intérêts simulés : ${r.interest.toLocaleString("fr-FR")} — échéance ${r.maturityDate}.` });
+    } catch (error) {
+      handleApiError(error, auth.clearSession, setMessage);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function renewPlacement(p: Placement) {
+    const reason = window.prompt("Motif du renouvellement :")?.trim();
+    if (!reason) { setMessage({ type: "error", text: "Le motif est obligatoire." }); return; }
+    const d = window.prompt("Nouvelle durée en jours (vide = identique) :")?.trim();
+    try {
+      await apiRequest(`/api/v1/treasury/placements/${p.id}/renew`, {
+        method: "POST", token: auth.token, idempotent: true,
+        body: JSON.stringify({ reason, version: p.version, ...(d ? { durationDays: Number(d) } : {}) })
+      });
+      setMessage({ type: "success", text: "Placement renouvelé : un nouveau placement ouvert a été créé." });
+      await load();
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
+  }
+
+  async function repatriatePlacement(p: Placement) {
+    if (!window.confirm("Confirmer le rapatriement (capital + intérêts) ?")) return;
+    const reason = window.prompt("Motif du rapatriement :")?.trim();
+    if (!reason) { setMessage({ type: "error", text: "Le motif est obligatoire." }); return; }
+    try {
+      const r = await apiRequest<{ total: number }>(`/api/v1/treasury/placements/${p.id}/repatriate`, {
+        method: "POST", token: auth.token, idempotent: true,
+        body: JSON.stringify({ reason, version: p.version })
+      });
+      setMessage({ type: "success", text: `Rapatrié : total ${Number(r.total).toLocaleString("fr-FR")} ${p.currency}.` });
+      await load();
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
+  }
+
+  async function downloadExport(path: string, filename: string) {
+    try {
+      const base = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || "http://localhost:3000";
+      const res = await fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+      if (!res.ok) { setMessage({ type: "error", text: "Export impossible (droits insuffisants ?)." }); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) { handleApiError(error, auth.clearSession, setMessage); }
   }
 
   return (
@@ -1093,33 +1174,54 @@ function TreasuryWorkspace() {
                   <label>Date de début
                     <input type="date" required value={placementForm.startDate} onChange={(e) => setPlacementForm({ ...placementForm, startDate: e.target.value })} />
                   </label>
-                  <button className="primary" disabled={loading} type="submit">Enregistrer le placement</button>
+                  <div className="actions">
+                    <button className="secondary" disabled={loading} type="button" onClick={() => void simulate()}>Simuler les intérêts</button>
+                    <button className="primary" disabled={loading} type="submit">Enregistrer le placement</button>
+                  </div>
+                  {simResult && (
+                    <p className="message info">Simulation (base {simResult.basis}j) : intérêts {simResult.interest.toLocaleString("fr-FR")} — total {simResult.total.toLocaleString("fr-FR")} — échéance {simResult.maturityDate}.</p>
+                  )}
                 </form>
               )}
             </section>
           )}
           <section className="panel">
-            <h2>Placements enregistrés</h2>
+            <div className="panel-head">
+              <h2>Placements enregistrés</h2>
+              {auth.hasPermission("treasury:placements:export") && (
+                <div className="actions">
+                  <button className="secondary" type="button" onClick={() => void downloadExport("/api/v1/treasury/placements/report.xlsx", "situation-placements-DEMO.xlsx")}>Export Excel</button>
+                  <button className="secondary" type="button" onClick={() => void downloadExport("/api/v1/treasury/placements/echeancier.pdf", "echeancier-placements-DEMO.pdf")}>Échéancier PDF</button>
+                </div>
+              )}
+            </div>
             {placements.length === 0 ? <p className="empty">Aucun placement enregistré.</p> : (
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Institution</th><th>Montant</th><th>Début</th><th>Durée</th><th>État</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Institution</th><th>Montant</th><th>Début</th><th>Durée</th><th>Échéance</th><th>État</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {placements.map((item) => (
+                    {placements.map((item) => {
+                      const ins = insights.find((x) => x.id === item.id);
+                      const statusLabel = item.status === "open" ? "Ouvert" : item.status === "closed" ? "Clôturé" : item.status === "cancelled" ? "Annulé" : item.status === "renewed" ? "Renouvelé" : "Rapatrié";
+                      return (
                       <tr key={item.id}>
                         <td>{item.institution?.name || institutions.find((institution) => institution.id === item.institutionId)?.name}</td>
                         <td>{item.principalAmount} {item.currency}</td>
                         <td>{item.startDate}</td>
                         <td>{item.durationDays} jours</td>
-                        <td>{item.status === "open" ? "Ouvert" : item.status === "closed" ? "Clôturé" : "Annulé"}</td>
+                        <td>{ins ? (<span>{ins.maturityDate}{ins.maturingSoon ? <strong className="badge-due"> ⚠ {ins.daysRemaining} j</strong> : null}</span>) : "—"}</td>
+                        <td>{statusLabel}</td>
                         <td>
                           {item.status === "open" && <div className="actions">
+                            {auth.hasPermission("treasury:placements:write") && <button className="secondary" onClick={() => void renewPlacement(item)}>Renouveler</button>}
+                            {auth.hasPermission("treasury:placements:write") && <button className="secondary" onClick={() => void repatriatePlacement(item)}>Rapatrier</button>}
                             {auth.hasPermission("treasury:placements:close") && <button className="secondary" onClick={() => void changeStatus(item, "close")}>Clôturer</button>}
                             {auth.hasPermission("treasury:placements:cancel") && <button className="danger" onClick={() => void changeStatus(item, "cancel")}>Annuler</button>}
                           </div>}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

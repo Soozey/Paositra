@@ -699,3 +699,16 @@ th {
     display: grid;
   }
 }
+
+/* Étape 2 — placements : entête de panneau avec actions + badge échéance */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.badge-due {
+  color: #8b1427;
+  font-weight: 700;
+}
