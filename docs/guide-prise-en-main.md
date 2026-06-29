@@ -97,3 +97,70 @@ Ouvrez ensuite **http://localhost:5173** (Trésorerie) ou **http://localhost:517
   plan de comptes définitif, formats officiels (relevés CCP, modèles d'accusés),
   matrice de droits contractuelle. Les écrans existent déjà ; il suffira d'y charger
   les vraies valeurs.
+
+---
+
+## Mise à jour — modules Lot 1 & Lot 2 livrés côté API (Étapes 4 à 9)
+
+Le **backend** des modules suivants est livré et vérifié contre une vraie base (login + API +
+DB + RBAC). Les onglets frontend dédiés restent à ajouter ; l'API est utilisable dès maintenant
+(ex. via l'OpenAPI sur http://localhost:3000/api-docs).
+
+- **Comptes courants** : comptes, journal encaissements/décaissements (solde calculé),
+  rapprochement, chèques (workflow), exports Excel/PDF.
+- **Budget ELO-P** : exercices, lignes de crédit, dossiers d'engagement
+  (brouillon→soumis→vérification→validé/rejeté→payé→archivé), contrôle du crédit disponible.
+- **Tableau de bord Trésorerie** : KPI calculés.
+- **Caisses (Lot 2)** : ouverture billetage → opérations (code auto, ticket PDF) → annulation →
+  clôture (écart) → validation Chef d'agence (verrou).
+- **Vérification** : grille écarts + justification, accusé de crédit PDF, mise à disposition
+  de fonds (double validation).
+- **Dashboards Opérations + inter-agences (G59/G60) + notifications**.
+
+### Commandes de démarrage mises à jour (PowerShell)
+```powershell
+npm install
+docker compose up -d
+npm run db:migrate
+$env:MIGRATION_DATABASE_URL="postgresql://paositra_owner:<pwd>@localhost:55432/paositra"
+node scripts/seed-demo.mjs                 # 10 comptes + données Lot 1 + permissions modules
+node scripts/seed-paoma-complements.mjs    # 93 postes + 19 rôles + jours fériés
+npm run dev:api ; npm run dev:treasury ; npm run dev:operations
+```
+
+### Parcours de test API (exemples, en tant que rôle habilité)
+- Trésorier : ouvrir un compte courant, saisir des écritures, voir le solde, émettre un chèque.
+- Trésorier : créer un exercice budgétaire, une ligne, un dossier d'engagement, le faire avancer
+  jusqu'à « payé » ; tenter un montant > crédit → message « dépasse le crédit disponible ».
+- Caissier (Tana-Centre) : ouvrir la caisse (billetage), enregistrer des opérations, clôturer.
+- Chef d'agence : valider la journée → la caisse est verrouillée.
+- Vérificateur : enregistrer une vérification avec écart (justification obligatoire), générer
+  un accusé de crédit PDF.
+- Directeur Opérations : consulter le tableau de bord et les notifications (demandes de valeurs).
+
+---
+
+## Onglets disponibles dans l'application (après démarrage)
+
+Ouvrez **http://localhost:8080** (Trésorerie) et **http://localhost:8081** (Opérations).
+
+**Lot 1 — Trésorerie** (connectez-vous : `demo.tresorier`) : onglets Placements, Créances,
+**Comptes courants**, **Budget**, **Tableau de bord**, Institutions, Rôles, Audit.
+- Comptes courants : créer un compte → « Journal » → ajouter écritures → « Rapprocher » →
+  émettre un chèque → changer son statut → exports « Journal Excel » / « Registre PDF ».
+- Budget : créer un exercice → ajouter une ligne de crédit → créer un dossier d'engagement →
+  le faire avancer (Soumettre → Vérifier → Valider → Payer → Archiver) ; un montant supérieur
+  au disponible est refusé avec un message clair. Exports « Crédits Excel » / « Bordereau PDF ».
+- Tableau de bord : indicateurs calculés + « Export PDF ».
+
+**Lot 2 — Opérations** : onglets Agences, **Caisses**, **Vérification**, **Tableau de bord**,
+**Inter-agences**, **Alertes**, Référentiel agences, Rôles.
+- Caisses (`demo.caissier1`) : « Ouvrir une caisse » (saisir le billetage) → « Opérations »
+  (enregistrer, imprimer le ticket, annuler) → « Clôturer » (billetage de fin → écart calculé).
+- Validation journée (`demo.chef.tana`) : sur une caisse clôturée, « Valider journée » la
+  verrouille (irréversible) ; « Refuser » la renvoie au caissier.
+- Vérification (`demo.verificateur`) : enregistrer une vérification (justification obligatoire
+  si écart) → « Accusé de crédit » (PDF). Mise à disposition de fonds : créer → vérifier solde →
+  autoriser (par une autre personne) → confirmer.
+- Tableau de bord / Inter-agences / Alertes (`demo.dop`) : indicateurs consolidés ; créer une
+  demande de valeurs (G59/G60) ; voir les notifications et les marquer lues.

@@ -8,6 +8,9 @@ import {
   apiRequest,
   useAuth
 } from "@paositra/web-core";
+import { CashModule } from "./CashModule";
+import { VerificationModule } from "./VerificationModule";
+import { OpsDashboardModule, ValueRequestsModule, AlertsPanel } from "./ops-extra-ui";
 
 interface Paged<T> {
   items: T[];
@@ -867,7 +870,7 @@ function sourceBadgeLabel(sourceType?: string) {
 
 function AgenciesWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"agencies" | "referentiel" | "roles" | "clarifications" | "users" | "audit">("agencies");
+  const [tab, setTab] = useState<"agencies" | "caisses" | "verification" | "opsdashboard" | "valeurs" | "alertes" | "referentiel" | "roles" | "clarifications" | "users" | "audit">("agencies");
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [roles, setRoles] = useState<RbacRole[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -1021,6 +1024,21 @@ function AgenciesWorkspace() {
         <button className={tab === "agencies" ? "active" : ""} onClick={() => setTab("agencies")}>
           Agences
         </button>
+        <button className={tab === "caisses" ? "active" : ""} onClick={() => setTab("caisses")}>
+          Caisses
+        </button>
+        <button className={tab === "verification" ? "active" : ""} onClick={() => setTab("verification")}>
+          Vérification
+        </button>
+        <button className={tab === "opsdashboard" ? "active" : ""} onClick={() => setTab("opsdashboard")}>
+          Tableau de bord
+        </button>
+        <button className={tab === "valeurs" ? "active" : ""} onClick={() => setTab("valeurs")}>
+          Inter-agences
+        </button>
+        <button className={tab === "alertes" ? "active" : ""} onClick={() => setTab("alertes")}>
+          Alertes
+        </button>
         <button className={tab === "referentiel" ? "active" : ""} onClick={() => setTab("referentiel")}>
           Référentiel agences
         </button>
@@ -1038,7 +1056,17 @@ function AgenciesWorkspace() {
         </button>
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "referentiel" ? (
+      {tab === "caisses" ? (
+        <CashModule />
+      ) : tab === "verification" ? (
+        <VerificationModule />
+      ) : tab === "opsdashboard" ? (
+        <OpsDashboardModule />
+      ) : tab === "valeurs" ? (
+        <ValueRequestsModule />
+      ) : tab === "alertes" ? (
+        <AlertsPanel />
+      ) : tab === "referentiel" ? (
         <ReferentielAgences
           agencies={agencies}
           filterSource={filterSource}

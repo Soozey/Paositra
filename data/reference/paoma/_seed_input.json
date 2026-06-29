@@ -1,0 +1,575 @@
+{
+ "permissions": [
+  [
+   "platform.users.read",
+   "common"
+  ],
+  [
+   "platform.users.create",
+   "common"
+  ],
+  [
+   "platform.users.update",
+   "common"
+  ],
+  [
+   "platform.roles.read",
+   "common"
+  ],
+  [
+   "platform.roles.assign",
+   "common"
+  ],
+  [
+   "platform.audit.read",
+   "common"
+  ],
+  [
+   "platform.parameters.read",
+   "common"
+  ],
+  [
+   "platform.parameters.update",
+   "common"
+  ],
+  [
+   "platform.reports.export",
+   "common"
+  ],
+  [
+   "treasury.dashboard.read",
+   "lot1"
+  ],
+  [
+   "treasury.institutions.read",
+   "lot1"
+  ],
+  [
+   "treasury.institutions.create",
+   "lot1"
+  ],
+  [
+   "treasury.placements.read",
+   "lot1"
+  ],
+  [
+   "treasury.placements.create",
+   "lot1"
+  ],
+  [
+   "treasury.placements.update",
+   "lot1"
+  ],
+  [
+   "treasury.placements.cancel",
+   "lot1"
+  ],
+  [
+   "treasury.placements.close",
+   "lot1"
+  ],
+  [
+   "treasury.placements.validate",
+   "lot1"
+  ],
+  [
+   "treasury.billing.read",
+   "lot1"
+  ],
+  [
+   "treasury.billing.create",
+   "lot1"
+  ],
+  [
+   "treasury.receivables.read",
+   "lot1"
+  ],
+  [
+   "treasury.receivables.create",
+   "lot1"
+  ],
+  [
+   "treasury.accounts.read",
+   "lot1"
+  ],
+  [
+   "treasury.payments.read",
+   "lot1"
+  ],
+  [
+   "treasury.payments.create",
+   "lot1"
+  ],
+  [
+   "treasury.cheques.read",
+   "lot1"
+  ],
+  [
+   "treasury.reconciliation.read",
+   "lot1"
+  ],
+  [
+   "treasury.budget.read",
+   "lot1"
+  ],
+  [
+   "treasury.reports.read",
+   "lot1"
+  ],
+  [
+   "treasury.reports.export",
+   "lot1"
+  ],
+  [
+   "operations.dashboard.read",
+   "lot2"
+  ],
+  [
+   "operations.agencies.read",
+   "lot2"
+  ],
+  [
+   "operations.agencies.create",
+   "lot2"
+  ],
+  [
+   "operations.agencies.update",
+   "lot2"
+  ],
+  [
+   "operations.agencies.import",
+   "lot2"
+  ],
+  [
+   "operations.agencies.export",
+   "lot2"
+  ],
+  [
+   "operations.agencies.validate",
+   "lot2"
+  ],
+  [
+   "operations.counters.read",
+   "lot2"
+  ],
+  [
+   "operations.counters.create",
+   "lot2"
+  ],
+  [
+   "operations.cashiers.read",
+   "lot2"
+  ],
+  [
+   "operations.cash.open",
+   "lot2"
+  ],
+  [
+   "operations.cash.operation.create",
+   "lot2"
+  ],
+  [
+   "operations.cash.operation.cancel",
+   "lot2"
+  ],
+  [
+   "operations.cash.close",
+   "lot2"
+  ],
+  [
+   "operations.day.validate",
+   "lot2"
+  ],
+  [
+   "operations.values.read",
+   "lot2"
+  ],
+  [
+   "operations.values.request",
+   "lot2"
+  ],
+  [
+   "operations.values.transfer",
+   "lot2"
+  ],
+  [
+   "operations.supporting_docs.read",
+   "lot2"
+  ],
+  [
+   "operations.supporting_docs.upload",
+   "lot2"
+  ],
+  [
+   "operations.verification.read",
+   "lot2"
+  ],
+  [
+   "operations.verification.validate",
+   "lot2"
+  ],
+  [
+   "operations.credit_ack.read",
+   "lot2"
+  ],
+  [
+   "operations.credit_ack.create",
+   "lot2"
+  ],
+  [
+   "operations.fund_availability.read",
+   "lot2"
+  ],
+  [
+   "operations.fund_availability.create",
+   "lot2"
+  ],
+  [
+   "operations.reports.read",
+   "lot2"
+  ],
+  [
+   "operations.reports.export",
+   "lot2"
+  ]
+ ],
+ "roles": [
+  [
+   "ADM_SYS",
+   "Super administrateur technique",
+   "common",
+   "global",
+   "Administration technique de la plateforme sans validation métier"
+  ],
+  [
+   "ADM_FONC",
+   "Administrateur fonctionnel",
+   "common",
+   "global",
+   "Paramétrage fonctionnel et gestion des référentiels"
+  ],
+  [
+   "AUDIT",
+   "Auditeur",
+   "common",
+   "global",
+   "Consultation des traces d'audit et contrôles"
+  ],
+  [
+   "CONSULT",
+   "Consultation",
+   "common",
+   "global",
+   "Accès lecture seule selon périmètre"
+  ],
+  [
+   "SUPPORT",
+   "Support technique",
+   "common",
+   "global",
+   "Assistance technique sans validation métier"
+  ],
+  [
+   "AGT_TRES",
+   "Agent Trésorerie",
+   "lot1",
+   "global",
+   "Saisie et consultation des opérations de trésorerie autorisées"
+  ],
+  [
+   "RESP_TRES",
+   "Responsable Trésorerie",
+   "lot1",
+   "global",
+   "Supervision des flux de trésorerie et validations selon délégation"
+  ],
+  [
+   "COMPT_TRES",
+   "Comptable Trésorerie",
+   "lot1",
+   "global",
+   "Contrôle comptable et rapprochements liés au Lot 1"
+  ],
+  [
+   "RESP_BUD",
+   "Responsable Budget",
+   "lot1",
+   "global",
+   "Suivi budgétaire et contrôle de l'exécution budgétaire"
+  ],
+  [
+   "VERIF_TRES",
+   "Vérificateur Trésorerie",
+   "lot1",
+   "global",
+   "Vérification des opérations avant validation ou clôture"
+  ],
+  [
+   "DAF_DEC",
+   "Directeur financier / Décideur",
+   "lot1",
+   "global",
+   "Décision et validation supérieure sur opérations sensibles"
+  ],
+  [
+   "AGT_GUICHET",
+   "Agent guichet",
+   "lot2",
+   "counter",
+   "Saisie des opérations guichet selon habilitation"
+  ],
+  [
+   "CAISSIER",
+   "Caissier",
+   "lot2",
+   "counter",
+   "Gestion de caisse: encaissements, décaissements et clôture caisse selon droit"
+  ],
+  [
+   "CHEF_AGENCE",
+   "Chef d'agence",
+   "lot2",
+   "agency",
+   "Supervision agence et validation journalière"
+  ],
+  [
+   "RESP_REG",
+   "Responsable régional",
+   "lot2",
+   "region",
+   "Supervision des agences d'une région ou direction régionale"
+  ],
+  [
+   "VERIF_OPS",
+   "Vérificateur opérations",
+   "lot2",
+   "region",
+   "Vérification des opérations agences, caisse, valeurs, écarts"
+  ],
+  [
+   "COMPT_SIEGE",
+   "Comptable siège",
+   "lot2",
+   "global",
+   "Contrôle comptable central des opérations agences"
+  ],
+  [
+   "SUP_OPS",
+   "Superviseur opérations",
+   "lot2",
+   "global",
+   "Pilotage opérationnel et suivi des anomalies"
+  ],
+  [
+   "RESP_VP",
+   "Responsable valeurs postales",
+   "lot2",
+   "global",
+   "Suivi des stocks et mouvements de valeurs postales"
+  ]
+ ],
+ "mapping": {
+  "CONSULT": [
+   "platform.parameters.read",
+   "treasury.dashboard.read",
+   "treasury.placements.read",
+   "treasury.receivables.read",
+   "operations.dashboard.read",
+   "operations.agencies.read"
+  ],
+  "AUDIT": [
+   "platform.audit.read",
+   "platform.reports.export",
+   "treasury.reports.read",
+   "treasury.reports.export",
+   "operations.reports.read",
+   "operations.reports.export"
+  ],
+  "SUPPORT": [
+   "platform.users.read",
+   "platform.parameters.read"
+  ],
+  "ADM_SYS": [
+   "platform.users.read",
+   "platform.users.create",
+   "platform.users.update",
+   "platform.roles.read",
+   "platform.roles.assign",
+   "platform.parameters.read",
+   "platform.parameters.update",
+   "platform.audit.read"
+  ],
+  "ADM_FONC": [
+   "platform.parameters.read",
+   "platform.parameters.update",
+   "treasury.institutions.read",
+   "treasury.institutions.create",
+   "operations.agencies.read",
+   "operations.agencies.create",
+   "operations.agencies.update",
+   "operations.agencies.import",
+   "operations.agencies.export",
+   "operations.counters.read",
+   "operations.counters.create",
+   "operations.values.read"
+  ],
+  "AGT_TRES": [
+   "treasury.dashboard.read",
+   "treasury.placements.read",
+   "treasury.placements.create",
+   "treasury.billing.read",
+   "treasury.billing.create",
+   "treasury.receivables.read",
+   "treasury.receivables.create",
+   "treasury.payments.read",
+   "treasury.payments.create"
+  ],
+  "RESP_TRES": [
+   "treasury.dashboard.read",
+   "treasury.placements.read",
+   "treasury.placements.update",
+   "treasury.placements.cancel",
+   "treasury.placements.close",
+   "treasury.placements.validate",
+   "treasury.receivables.read",
+   "treasury.reports.read",
+   "treasury.reports.export"
+  ],
+  "COMPT_TRES": [
+   "treasury.accounts.read",
+   "treasury.reconciliation.read",
+   "treasury.cheques.read",
+   "treasury.receivables.read",
+   "treasury.reports.read",
+   "treasury.reports.export"
+  ],
+  "RESP_BUD": [
+   "treasury.budget.read",
+   "treasury.dashboard.read",
+   "treasury.reports.read",
+   "treasury.reports.export"
+  ],
+  "VERIF_TRES": [
+   "treasury.placements.read",
+   "treasury.receivables.read",
+   "treasury.reports.read"
+  ],
+  "DAF_DEC": [
+   "treasury.dashboard.read",
+   "treasury.placements.read",
+   "treasury.placements.validate",
+   "treasury.reports.read",
+   "treasury.reports.export"
+  ],
+  "AGT_GUICHET": [
+   "operations.dashboard.read",
+   "operations.cash.operation.create",
+   "operations.values.read"
+  ],
+  "CAISSIER": [
+   "operations.cash.open",
+   "operations.cash.operation.create",
+   "operations.cash.operation.cancel",
+   "operations.cash.close",
+   "operations.values.read"
+  ],
+  "CHEF_AGENCE": [
+   "operations.agencies.read",
+   "operations.counters.read",
+   "operations.cash.close",
+   "operations.day.validate",
+   "operations.verification.read",
+   "operations.reports.read"
+  ],
+  "RESP_REG": [
+   "operations.dashboard.read",
+   "operations.agencies.read",
+   "operations.verification.read",
+   "operations.reports.read",
+   "operations.reports.export"
+  ],
+  "VERIF_OPS": [
+   "operations.verification.read",
+   "operations.verification.validate",
+   "operations.credit_ack.read",
+   "operations.credit_ack.create",
+   "operations.reports.read"
+  ],
+  "COMPT_SIEGE": [
+   "operations.agencies.read",
+   "operations.verification.read",
+   "operations.reports.read",
+   "operations.reports.export"
+  ],
+  "SUP_OPS": [
+   "operations.dashboard.read",
+   "operations.agencies.read",
+   "operations.verification.read",
+   "operations.reports.read",
+   "operations.reports.export"
+  ],
+  "RESP_VP": [
+   "operations.values.read",
+   "operations.values.request",
+   "operations.values.transfer",
+   "operations.reports.read"
+  ]
+ },
+ "holidays": [
+  [
+   "2026-01-01",
+   "Nouvel An",
+   "national"
+  ],
+  [
+   "2026-03-08",
+   "Journée mondiale de la femme",
+   "national"
+  ],
+  [
+   "2026-03-29",
+   "Commémoration des martyrs (1947)",
+   "national"
+  ],
+  [
+   "2026-04-06",
+   "Lundi de Pâques",
+   "national"
+  ],
+  [
+   "2026-05-01",
+   "Fête du Travail",
+   "national"
+  ],
+  [
+   "2026-05-14",
+   "Ascension",
+   "national"
+  ],
+  [
+   "2026-05-25",
+   "Lundi de Pentecôte",
+   "national"
+  ],
+  [
+   "2026-06-26",
+   "Fête de l'Indépendance",
+   "national"
+  ],
+  [
+   "2026-08-15",
+   "Assomption",
+   "national"
+  ],
+  [
+   "2026-11-01",
+   "Toussaint",
+   "national"
+  ],
+  [
+   "2026-12-25",
+   "Noël",
+   "national"
+  ]
+ ]
+}
