@@ -261,7 +261,7 @@ export class Placement {
   startDate!: string;
 
   @Column({ length: 20, default: "open" })
-  status!: "open" | "cancelled" | "closed";
+  status!: "open" | "cancelled" | "closed" | "renewed" | "repatriated";
 
   @Column({ name: "cancellation_reason", type: "text", nullable: true })
   cancellationReason!: string | null;

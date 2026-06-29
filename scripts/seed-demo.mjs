@@ -66,18 +66,20 @@ try {
   await client.query("BEGIN");
   const uids = USERS.map(u=>u.id), pids = PLACEMENTS.map(p=>p.id), iids = INSTITUTIONS.map(i=>i.id), aids = AGENCIES.map(a=>a.id);
   // Nettoyage idempotent (ordre FK)
-  await client.query("DELETE FROM treasury.placement_history WHERE placement_id = ANY($1)", [pids]);
-  await client.query("DELETE FROM treasury.placements WHERE id = ANY($1)", [pids]);
+  await client.query("DELETE FROM treasury.placement_history WHERE placement_id IN (SELECT id FROM treasury.placements WHERE institution_id = ANY($1))", [iids]);
+  await client.query("UPDATE treasury.placements SET renewed_from_id = NULL WHERE institution_id = ANY($1)", [iids]);
+  await client.query("DELETE FROM treasury.placements WHERE institution_id = ANY($1)", [iids]);
   await client.query("DELETE FROM treasury.institutions WHERE id = ANY($1)", [iids]);
   await client.query("DELETE FROM operations.agencies WHERE id = ANY($1)", [aids]);
   await client.query("DELETE FROM platform.user_permissions WHERE user_id = ANY($1)", [uids]);
-  await client.query("DELETE FROM platform.sessions WHERE user_id = ANY($1)", [uids]);
-  await client.query("DELETE FROM platform.users WHERE id = ANY($1)", [uids]);
 
   const hash = await bcrypt.hash(PW, 10);
   for (const u of USERS) {
     await client.query(
-      "INSERT INTO platform.users(id,email,display_name,password_hash,is_active,must_change_password) VALUES($1,$2,$3,$4,true,false)",
+      `INSERT INTO platform.users(id,email,display_name,password_hash,is_active,must_change_password)
+       VALUES($1,$2,$3,$4,true,false)
+       ON CONFLICT (id) DO UPDATE SET email=EXCLUDED.email, display_name=EXCLUDED.display_name,
+         password_hash=EXCLUDED.password_hash, is_active=true, must_change_password=false, updated_at=now()`,
       [u.id, u.email, u.name, hash]
     );
     for (const code of ROLE_PERMS[u.role]) {

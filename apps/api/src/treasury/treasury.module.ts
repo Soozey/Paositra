@@ -8,12 +8,17 @@ import {
 import { TreasuryController } from "./treasury.controller";
 import { TreasuryService } from "./treasury.service";
 import { PlacementInsightsController } from "./placement-insights";
+import { PlacementLifecycleController } from "./placement-lifecycle";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Institution, Placement, PlacementHistory])
   ],
-  controllers: [TreasuryController, PlacementInsightsController],
+  controllers: [
+    TreasuryController,
+    PlacementInsightsController,
+    PlacementLifecycleController
+  ],
   providers: [TreasuryService]
 })
 export class TreasuryModule {}
