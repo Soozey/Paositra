@@ -297,7 +297,7 @@ function AgenciesWorkspace() {
           <div className="kpi-card">
             <span>Rôles proposés</span>
             <strong>{roles.length}</strong>
-            <small>Proposition KCI — à valider PAOMA</small>
+            <small>Proposition à valider PAOMA</small>
           </div>
           <div className="kpi-card">
             <span>Audit consultable</span>
@@ -665,7 +665,7 @@ function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "
     <section className="panel">
       <h2>Rôles &amp; habilitations</h2>
       <div className="roles-table-notice">
-        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
+        Tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
         Le DAO reste la référence contractuelle.
       </div>
       {(["common", "lot1", "lot2"] as const).map((l) => {

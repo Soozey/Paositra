@@ -15,7 +15,7 @@ export async function buildXlsx(
   title?: string
 ): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Soozey SARL — PAOSITRA (DÉMONSTRATION)";
+  wb.creator = "PAOSITRA";
   wb.created = new Date();
   const ws = wb.addWorksheet(sheetName);
   if (title) {
@@ -58,9 +58,6 @@ export function buildPdf(
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
 
-      doc.fontSize(8).fillColor("#8b1427")
-        .text("DOCUMENT DE DÉMONSTRATION — Données non contractuelles — KCI / Soozey SARL", { align: "right" });
-      doc.moveDown(0.5);
       doc.fillColor("#000").fontSize(16).text(title, { align: "left" });
       doc.fontSize(10).fillColor("#555").text(subtitle);
       doc.moveDown(0.8);

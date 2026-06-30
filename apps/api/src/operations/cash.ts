@@ -247,14 +247,14 @@ export class CashController {
     if (!r.length) throw new NotFoundException("Opération introuvable.");
     const o = r[0];
     ensureCashScope(req, o.agency_id, o.cashier_user_id);
-    const buf = await buildPdf("Ticket d'opération", "[DOCUMENT DE DÉMONSTRATION] PAOSITRA — NON CONTRACTUEL",
+    const buf = await buildPdf("Ticket d'opération", `PAOSITRA — ${o.agency}`,
       [["Code", o.code], ["Agence", o.agency], ["Type", o.op_type], ["Sens", o.direction],
        ["Montant", Number(o.amount).toLocaleString("fr-FR") + " MGA"], ["Mode", o.payment_mode]],
       ["Champ", "Valeur"]);
     await this.audit.record(this.ds.manager, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
       action: "operations.cash.ticket.export", objectType: "operations.cash_operation", objectId: opId, ...requestMetadata(req) });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="ticket-${o.code}-DEMO.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="ticket-${o.code}.pdf"`);
     res.end(buf);
   }
 }

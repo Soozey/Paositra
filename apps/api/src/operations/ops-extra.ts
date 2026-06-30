@@ -197,12 +197,12 @@ export class OpsDashboardController {
       ["Journées de caisse à valider", String(k.journeesAValider)],
       ["Demandes de valeurs en cours", String(k.demandesValeursEnCours)]
     ];
-    const buf = await buildPdf("Tableau de bord Opérations", "[DÉMONSTRATION] PAOSITRA — KPI consolidés — NON CONTRACTUEL",
+    const buf = await buildPdf("Tableau de bord Opérations", `PAOSITRA — KPI consolidés — Généré le ${new Date().toLocaleDateString("fr-FR")}`,
       lines, ["Indicateur", "Valeur"]);
     await this.audit.record(this.ds.manager, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
       action: "operations.dashboard.export.pdf", objectType: "operations.dashboard", ...requestMetadata(req) });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="tableau-bord-operations-DEMO.pdf"');
+    res.setHeader("Content-Disposition", `attachment; filename="Tableau_Bord_Operations_${new Date().toISOString().slice(0,10)}.pdf"`);
     res.end(buf);
   }
 }

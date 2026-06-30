@@ -108,14 +108,14 @@ export class VerificationController {
        FROM operations.credit_acknowledgements c JOIN operations.agencies a ON a.id=c.agency_id WHERE c.id=$1`, [id]);
     if (!r.length) throw new NotFoundException("Accusé introuvable.");
     const c = r[0];
-    const buf = await buildPdf("Accusé de crédit", "[DOCUMENT DE DÉMONSTRATION] PAOSITRA — modèle non officiel — À VALIDER PAOMA",
+    const buf = await buildPdf("Accusé de crédit", `PAOSITRA — ${c.agency}`,
       [["Numéro", c.number], ["Agence", c.agency], ["Bénéficiaire", c.beneficiary],
        ["Montant", Number(c.amount).toLocaleString("fr-FR") + " MGA"]],
       ["Champ", "Valeur"]);
     await this.audit.record(this.ds.manager, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
       action: "operations.credit_ack.export", objectType: "operations.credit_acknowledgement", objectId: id, ...requestMetadata(req) });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="accuse-credit-${c.number}-DEMO.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="accuse-credit-${c.number}.pdf"`);
     res.end(buf);
   }
 
