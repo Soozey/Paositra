@@ -352,6 +352,27 @@ const USER_SPECS = [
   }
 ];
 
+const FIXED_PASSWORDS = {
+  "demo.admin@paositra-demo.mg": "Demo-PAO-2026-ESBZ!",
+  "demo.daf@paositra-demo.mg": "Demo-PAO-2026-2GD4!",
+  "demo.tresorier@paositra-demo.mg": "Demo-PAO-2026-2L32!",
+  "demo.comptable@paositra-demo.mg": "Demo-PAO-2026-Y9J6!",
+  "demo.auditeur@paositra-demo.mg": "Demo-PAO-2026-LE5L!",
+  "demo.dop@paositra-demo.mg": "Demo-PAO-2026-UL8V!",
+  "demo.chef.tana@paositra-demo.mg": "Demo-PAO-2026-FG8F!",
+  "demo.caissier1@paositra-demo.mg": "Demo-PAO-2026-2S8J!",
+  "demo.caissier.ambanidia@paositra-demo.mg": "Demo-PAO-2026-CVFS!",
+  "demo.caissier.analakely@paositra-demo.mg": "Demo-PAO-2026-BZP8!",
+  "demo.caissier.andoharanofotsy@paositra-demo.mg": "Demo-PAO-2026-VTPS!",
+  "demo.caissier.andravoahangy@paositra-demo.mg": "Demo-PAO-2026-M273!",
+  "demo.verificateur@paositra-demo.mg": "Demo-PAO-2026-H7AE!",
+  "demo.comptasieg@paositra-demo.mg": "Demo-PAO-2026-NSQ2!",
+  "demo.admin@paositra.local": "Demo-PAO-2026-WMS7!",
+  "demo.tresorerie@paositra.local": "Demo-PAO-2026-Z9TK!",
+  "demo.operations@paositra.local": "Demo-PAO-2026-JYCU!",
+  "demo.dg@paositra.local": "Demo-PAO-2026-GMU5!"
+};
+
 function password() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return `Demo-PAO-2026-${[...randomBytes(4)].map((byte) => alphabet[byte % alphabet.length]).join("")}!`;
@@ -398,7 +419,7 @@ try {
 
   const output = [];
   for (const user of USER_SPECS) {
-    const tempPassword = password();
+    const tempPassword = FIXED_PASSWORDS[user.email] ?? password();
     await client.query(
       `INSERT INTO platform.users(id,email,display_name,password_hash,is_active,must_change_password)
        VALUES($1,$2,$3,$4,true,false)
