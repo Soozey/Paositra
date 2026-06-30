@@ -4,8 +4,12 @@ import { downloadFile, fmt } from "./util";
 
 interface Agency { id: string; name: string }
 interface OpsKpi {
-  agencesTotal: number; agencesParRegion: { region: string; n: number }[]; operationsActives: number;
-  chiffreAffairesDemo: number; anomaliesVerification: number; journeesAValider: number; demandesValeursEnCours: number;
+  agencesTotal: number; agencesParRegion: { region: string; n: number }[];
+  operationsActives: number; chiffreAffaires: number;
+  anomaliesVerification: number; caissesAvecEcart: number; caissesOuvertesAnc: number;
+  journeesAValider: number; demandesValeursEnCours: number;
+  detailEcarts: { agency: string; reg: string; date: string; ecart: string; status: string; note: string | null }[];
+  detailNonCloturees: { agency: string; reg: string; date: string }[];
 }
 interface ValueReq { id: string; reference: string; valueType: string; amount: string; status: string; version: number; fromAgency: string; toAgency: string }
 interface Notif { id: string; type: string; message: string; isRead: boolean; createdAt: string; isVirtual?: boolean }
@@ -22,22 +26,50 @@ export function OpsDashboardModule() {
   })(); }, [auth.token]);
   if (msg) return <Message type={msg.type}>{msg.text}</Message>;
   if (!k) return <p className="empty">Chargement du tableau de bord…</p>;
+  const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="grid">
-      <section className="panel">
+      <section className="panel wide-panel">
         <div className="panel-head">
-          <h2>Tableau de bord Opérations <span className="badge source-demo">DEMO</span></h2>
-          <button className="secondary" type="button" onClick={() => void downloadFile(auth.token, "/api/v1/operations/dashboard.pdf", "tableau-bord-operations-DEMO.pdf").then((e) => e && setMsg({ type: "error", text: e }))}>Export PDF</button>
+          <h2>Tableau de bord Opérations</h2>
+          <button className="secondary" type="button" onClick={() => void downloadFile(auth.token, "/api/v1/operations/dashboard.pdf", `Tableau_Bord_Operations_${today}.pdf`).then((e) => e && setMsg({ type: "error", text: e }))}>Export PDF</button>
         </div>
         <div className="kpi-grid">
           <div className="kpi-card"><span>Agences / postes</span><strong>{k.agencesTotal}</strong></div>
           <div className="kpi-card"><span>Opérations actives</span><strong>{k.operationsActives}</strong></div>
-          <div className="kpi-card"><span>Chiffre d'affaires [DEMO]</span><strong>{fmt(k.chiffreAffairesDemo)}</strong><small>MGA</small></div>
-          <div className="kpi-card"><span>Anomalies vérification</span><strong>{k.anomaliesVerification}</strong></div>
+          <div className="kpi-card"><span>Chiffre d'affaires (MGA)</span><strong>{fmt(k.chiffreAffaires)}</strong></div>
+          <div className={`kpi-card${k.caissesAvecEcart > 0 ? " kpi-alert" : ""}`}><span>Caisses avec écart</span><strong>{k.caissesAvecEcart}</strong></div>
+          <div className={`kpi-card${k.caissesOuvertesAnc > 0 ? " kpi-alert" : ""}`}><span>Caisses non clôturées (j. antér.)</span><strong>{k.caissesOuvertesAnc}</strong></div>
+          <div className="kpi-card"><span>Anomalies vérification manuelle</span><strong>{k.anomaliesVerification}</strong></div>
           <div className="kpi-card"><span>Journées à valider</span><strong>{k.journeesAValider}</strong></div>
           <div className="kpi-card"><span>Demandes de valeurs</span><strong>{k.demandesValeursEnCours}</strong></div>
         </div>
       </section>
+      {k.detailNonCloturees.length > 0 && (
+        <section className="panel wide-panel">
+          <h2>Caisses non clôturées (jours antérieurs)</h2>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Agence</th><th>Caisse</th><th>Date journée</th></tr></thead>
+            <tbody>{k.detailNonCloturees.map((r, i) => <tr key={i}><td>{r.agency}</td><td>{r.reg}</td><td>{r.date}</td></tr>)}</tbody>
+          </table></div>
+        </section>
+      )}
+      {k.detailEcarts.length > 0 && (
+        <section className="panel wide-panel">
+          <h2>Caisses avec écart (dernières clôtures)</h2>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Agence</th><th>Caisse</th><th>Date</th><th>Écart (MGA)</th><th>Note caissier</th><th>État</th></tr></thead>
+            <tbody>{k.detailEcarts.map((r, i) => (
+              <tr key={i}>
+                <td>{r.agency}</td><td>{r.reg}</td><td>{r.date}</td>
+                <td><strong className={Number(r.ecart) !== 0 ? "badge-due" : ""}>{fmt(r.ecart)}</strong></td>
+                <td>{r.note ?? "—"}</td>
+                <td>{r.status === "fermee" ? "Clôturée" : r.status === "validee" ? "Validée" : r.status === "refusee" ? "Refusée" : r.status}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </section>
+      )}
       <section className="panel">
         <h2>Couverture par région</h2>
         <div className="table-wrap"><table><thead><tr><th>Région</th><th>Postes</th></tr></thead>

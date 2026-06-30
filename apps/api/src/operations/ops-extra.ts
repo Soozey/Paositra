@@ -150,18 +150,32 @@ export class OpsDashboardController {
   constructor(private readonly ds: DataSource, private readonly audit: AuditService) {}
 
   private async kpis() {
-    const q = async (sql: string) => (await this.ds.query(sql))[0];
+    const q = async (sql: string, params: unknown[] = []) => (await this.ds.query(sql, params))[0];
+    const today = new Date().toISOString().slice(0, 10);
     const ag = await q("SELECT count(*)::int n FROM operations.agencies");
     const byRegion = await this.ds.query("SELECT region, count(*)::int n FROM operations.agencies GROUP BY region ORDER BY n DESC LIMIT 8");
     const ops = await q("SELECT count(*)::int n, COALESCE(sum(CASE WHEN direction='encaissement' THEN amount ELSE 0 END),0) ca FROM operations.cash_operations WHERE status='active'");
-    const anomalies = await q("SELECT count(*)::int n FROM operations.verifications WHERE ecart <> 0");
+    const anomaliesVerif = await q("SELECT count(*)::int n FROM operations.verifications WHERE ecart <> 0");
+    const caissesAvecEcart = await q("SELECT count(*)::int n FROM operations.cash_sessions WHERE ecart IS NOT NULL AND ecart <> 0");
+    const caissesOuvertesAnc = await q("SELECT count(*)::int n FROM operations.cash_sessions WHERE status='ouverte' AND business_date < $1", [today]);
     const aValider = await q("SELECT count(*)::int n FROM operations.cash_sessions WHERE status='fermee'");
     const valeurs = await q("SELECT count(*)::int n FROM operations.value_requests WHERE status IN ('demande','notifiee')");
+    const detailEcarts = await this.ds.query(
+      `SELECT a.name AS agency, s.register_label AS reg, s.business_date AS date, s.ecart, s.status, s.cashier_note AS note
+       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id
+       WHERE s.ecart IS NOT NULL AND s.ecart <> 0 ORDER BY s.business_date DESC LIMIT 20`);
+    const detailNonCloturees = await this.ds.query(
+      `SELECT a.name AS agency, s.register_label AS reg, s.business_date AS date
+       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id
+       WHERE s.status='ouverte' AND s.business_date < $1 ORDER BY s.business_date`, [today]);
     return {
-      demo: true, agencesTotal: ag.n, agencesParRegion: byRegion,
-      operationsActives: ops.n, chiffreAffairesDemo: Number(ops.ca),
-      anomaliesVerification: anomalies.n, journeesAValider: aValider.n,
-      demandesValeursEnCours: valeurs.n, genereLe: new Date().toISOString()
+      agencesTotal: ag.n, agencesParRegion: byRegion,
+      operationsActives: ops.n, chiffreAffaires: Number(ops.ca),
+      anomaliesVerification: anomaliesVerif.n, caissesAvecEcart: caissesAvecEcart.n,
+      caissesOuvertesAnc: caissesOuvertesAnc.n, journeesAValider: aValider.n,
+      demandesValeursEnCours: valeurs.n,
+      detailEcarts, detailNonCloturees,
+      genereLe: new Date().toISOString()
     };
   }
 
@@ -176,8 +190,10 @@ export class OpsDashboardController {
     const lines = [
       ["Agences / postes", String(k.agencesTotal)],
       ["Opérations actives", String(k.operationsActives)],
-      ["Chiffre d'affaires [DEMO] (MGA)", k.chiffreAffairesDemo.toLocaleString("fr-FR")],
-      ["Anomalies de vérification", String(k.anomaliesVerification)],
+      ["Chiffre d'affaires (MGA)", k.chiffreAffaires.toLocaleString("fr-FR")],
+      ["Caisses avec écart", String(k.caissesAvecEcart)],
+      ["Caisses non clôturées (jours antérieurs)", String(k.caissesOuvertesAnc)],
+      ["Anomalies de vérification manuelle", String(k.anomaliesVerification)],
       ["Journées de caisse à valider", String(k.journeesAValider)],
       ["Demandes de valeurs en cours", String(k.demandesValeursEnCours)]
     ];
