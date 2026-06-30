@@ -58,6 +58,18 @@ interface RbacRole {
   status: string;
 }
 
+type TreasuryTab =
+  | "institutions"
+  | "placements"
+  | "receivables"
+  | "accounts"
+  | "budget"
+  | "dashboard"
+  | "roles"
+  | "clarifications"
+  | "users"
+  | "audit";
+
 interface DemoScreen {
   id: string;
   label: string;
@@ -769,7 +781,7 @@ function DemoPreview({
 
 function TreasuryWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"institutions" | "placements" | "receivables" | "accounts" | "budget" | "dashboard" | "roles" | "clarifications" | "users" | "audit">("placements");
+  const [tab, setTab] = useState<TreasuryTab>("placements");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -827,6 +839,26 @@ function TreasuryWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleTabs: Array<{ id: TreasuryTab; label: string }> = [
+    auth.hasPermission("treasury:placements:read") && { id: "placements", label: "Placements" },
+    auth.hasPermission("treasury:receivables:read") && { id: "receivables", label: "Cr?ances" },
+    auth.hasPermission("treasury:accounts:read") && { id: "accounts", label: "Comptes courants" },
+    auth.hasPermission("treasury:budget:read") && { id: "budget", label: "Budget" },
+    auth.hasPermission("treasury:dashboard:read") && { id: "dashboard", label: "Tableau de bord" },
+    auth.hasPermission("treasury:institutions:read") && { id: "institutions", label: "Institutions" },
+    auth.hasPermission("platform:roles:read") && { id: "roles", label: "R?les & habilitations" },
+    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Points ? clarifier" },
+    auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
+    auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
+  ].filter(Boolean) as Array<{ id: TreasuryTab; label: string }>;
+  const canSeeCurrentTab = visibleTabs.some((item) => item.id === tab);
+
+  useEffect(() => {
+    if (!canSeeCurrentTab && visibleTabs[0]) {
+      setTab(visibleTabs[0].id);
+    }
+  }, [auth.user, canSeeCurrentTab, tab, visibleTabs]);
 
   async function createInstitution(event: FormEvent) {
     event.preventDefault();
@@ -1020,40 +1052,19 @@ function TreasuryWorkspace() {
           </div>
         </div>
       </section>
-      <nav className="tabs" aria-label="Modules de trésorerie">
-        <button className={tab === "placements" ? "active" : ""} onClick={() => setTab("placements")}>
-          Placements
-        </button>
-        <button className={tab === "receivables" ? "active" : ""} onClick={() => setTab("receivables")}>
-          Créances
-        </button>
-        <button className={tab === "accounts" ? "active" : ""} onClick={() => setTab("accounts")}>
-          Comptes courants
-        </button>
-        <button className={tab === "budget" ? "active" : ""} onClick={() => setTab("budget")}>
-          Budget
-        </button>
-        <button className={tab === "dashboard" ? "active" : ""} onClick={() => setTab("dashboard")}>
-          Tableau de bord
-        </button>
-        <button className={tab === "institutions" ? "active" : ""} onClick={() => setTab("institutions")}>
-          Institutions
-        </button>
-        <button className={tab === "roles" ? "active" : ""} onClick={() => setTab("roles")}>
-          Rôles &amp; habilitations
-        </button>
-        <button className={tab === "clarifications" ? "active" : ""} onClick={() => setTab("clarifications")}>
-          Points à clarifier
-        </button>
-        <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
-          Utilisateurs
-        </button>
-        <button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
-          Audit
-        </button>
+      <nav className="tabs" aria-label="Modules de tr?sorerie">
+        {visibleTabs.map((item) => (
+          <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "dashboard" ? (
+      {visibleTabs.length === 0 ? (
+        <Message type="info">Votre compte n'a acc?s ? aucun module Tr?sorerie.</Message>
+      ) : !canSeeCurrentTab ? (
+        <Message type="info">Votre compte n'a pas acc?s ? ce module.</Message>
+      ) : tab === "dashboard" ? (
         <TreasuryDashboardModule />
       ) : tab === "budget" ? (
         <BudgetModule />

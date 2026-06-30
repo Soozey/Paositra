@@ -60,6 +60,19 @@ interface AuditEvent {
   actorUserId: string | null;
 }
 
+type OperationsTab =
+  | "agencies"
+  | "caisses"
+  | "verification"
+  | "opsdashboard"
+  | "valeurs"
+  | "alertes"
+  | "referentiel"
+  | "roles"
+  | "clarifications"
+  | "users"
+  | "audit";
+
 interface DemoScreen {
   id: string;
   label: string;
@@ -870,7 +883,7 @@ function sourceBadgeLabel(sourceType?: string) {
 
 function AgenciesWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"agencies" | "caisses" | "verification" | "opsdashboard" | "valeurs" | "alertes" | "referentiel" | "roles" | "clarifications" | "users" | "audit">("agencies");
+  const [tab, setTab] = useState<OperationsTab>("agencies");
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [roles, setRoles] = useState<RbacRole[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -912,6 +925,27 @@ function AgenciesWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleTabs: Array<{ id: OperationsTab; label: string }> = [
+    auth.hasPermission("operations:agencies:read") && { id: "agencies", label: "Agences" },
+    auth.hasPermission("operations:counters:read") && { id: "caisses", label: "Caisses" },
+    auth.hasPermission("operations:verification:read") && { id: "verification", label: "V?rification" },
+    auth.hasPermission("operations:dashboard:read") && { id: "opsdashboard", label: "Tableau de bord" },
+    auth.hasPermission("operations:transfers:read") && { id: "valeurs", label: "Inter-agences" },
+    auth.hasPermission("platform:notifications:read") && { id: "alertes", label: "Alertes" },
+    auth.hasPermission("operations:agencies:read") && { id: "referentiel", label: "R?f?rentiel agences" },
+    auth.hasPermission("platform:roles:read") && { id: "roles", label: "R?les & habilitations" },
+    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Points ? clarifier" },
+    auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
+    auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
+  ].filter(Boolean) as Array<{ id: OperationsTab; label: string }>;
+  const canSeeCurrentTab = visibleTabs.some((item) => item.id === tab);
+
+  useEffect(() => {
+    if (!canSeeCurrentTab && visibleTabs[0]) {
+      setTab(visibleTabs[0].id);
+    }
+  }, [auth.user, canSeeCurrentTab, tab, visibleTabs]);
 
   async function createAgency(event: FormEvent) {
     event.preventDefault();
@@ -1020,43 +1054,19 @@ function AgenciesWorkspace() {
           </div>
         </div>
       </section>
-      <nav className="tabs" aria-label="Modules opérations">
-        <button className={tab === "agencies" ? "active" : ""} onClick={() => setTab("agencies")}>
-          Agences
-        </button>
-        <button className={tab === "caisses" ? "active" : ""} onClick={() => setTab("caisses")}>
-          Caisses
-        </button>
-        <button className={tab === "verification" ? "active" : ""} onClick={() => setTab("verification")}>
-          Vérification
-        </button>
-        <button className={tab === "opsdashboard" ? "active" : ""} onClick={() => setTab("opsdashboard")}>
-          Tableau de bord
-        </button>
-        <button className={tab === "valeurs" ? "active" : ""} onClick={() => setTab("valeurs")}>
-          Inter-agences
-        </button>
-        <button className={tab === "alertes" ? "active" : ""} onClick={() => setTab("alertes")}>
-          Alertes
-        </button>
-        <button className={tab === "referentiel" ? "active" : ""} onClick={() => setTab("referentiel")}>
-          Référentiel agences
-        </button>
-        <button className={tab === "roles" ? "active" : ""} onClick={() => setTab("roles")}>
-          Rôles &amp; habilitations
-        </button>
-        <button className={tab === "clarifications" ? "active" : ""} onClick={() => setTab("clarifications")}>
-          Points à clarifier
-        </button>
-        <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
-          Utilisateurs
-        </button>
-        <button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
-          Audit
-        </button>
+      <nav className="tabs" aria-label="Modules op?rations">
+        {visibleTabs.map((item) => (
+          <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "caisses" ? (
+      {visibleTabs.length === 0 ? (
+        <Message type="info">Votre compte n'a acc?s ? aucun module Op?rations.</Message>
+      ) : !canSeeCurrentTab ? (
+        <Message type="info">Votre compte n'a pas acc?s ? ce module.</Message>
+      ) : tab === "caisses" ? (
         <CashModule />
       ) : tab === "verification" ? (
         <VerificationModule />

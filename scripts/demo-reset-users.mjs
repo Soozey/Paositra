@@ -112,7 +112,163 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+const LEGACY_TECHNICAL_EMAILS = [
+  "presentation.local+20260625204913@paositra.invalid",
+  "presentation.lot1+20260625214134@paositra.invalid",
+  "presentation.lot2+20260625214134@paositra.invalid",
+  "viewer.local@paositra.invalid"
+];
+
 const USER_SPECS = [
+  {
+    id: "00000000-0000-4000-a000-000000000001",
+    email: "demo.admin@paositra-demo.mg",
+    displayName: "[DEMO] Admin Systeme",
+    role: "ADMIN_SYSTEME",
+    usage: "Administration technique demo",
+    permissions: unique([
+      ...PERMISSIONS.platformAdmin,
+      ...PERMISSIONS.treasuryRead,
+      ...PERMISSIONS.treasuryManage,
+      ...PERMISSIONS.operationsRead,
+      ...PERMISSIONS.operationsManage
+    ])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000002",
+    email: "demo.daf@paositra-demo.mg",
+    displayName: "[DEMO] Directeur Financier",
+    role: "DIRECTEUR_FINANCIER",
+    usage: "Direction financiere lecture, validation et exports Lot 1",
+    permissions: unique([
+      "platform:dashboard:read",
+      "platform:audit:read",
+      ...PERMISSIONS.treasuryRead,
+      "treasury:institutions:validate",
+      "treasury:placements:approve",
+      "treasury:budget:validate"
+    ])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000003",
+    email: "demo.tresorier@paositra-demo.mg",
+    displayName: "[DEMO] Tresorier Chef",
+    role: "TRESORIER_CHEF",
+    usage: "Pilotage operationnel Tresorerie",
+    permissions: unique([...PERMISSIONS.treasuryRead, ...PERMISSIONS.treasuryManage])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000004",
+    email: "demo.comptable@paositra-demo.mg",
+    displayName: "[DEMO] Comptable",
+    role: "COMPTABLE",
+    usage: "Comptabilite tresorerie et creances",
+    permissions: unique([
+      "treasury:dashboard:read",
+      "treasury:institutions:read",
+      "treasury:placements:read",
+      "treasury:accounts:read",
+      "treasury:accounts:manage",
+      "treasury:flows:read",
+      "treasury:flows:manage",
+      "treasury:reports:read",
+      "treasury:receivables:read",
+      "treasury:receivables:write",
+      "treasury:budget:read"
+    ])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000005",
+    email: "demo.auditeur@paositra-demo.mg",
+    displayName: "[DEMO] Auditeur Interne",
+    role: "AUDITEUR_INTERNE",
+    usage: "Audit lecture seule et exports",
+    permissions: unique([...PERMISSIONS.audit, ...PERMISSIONS.treasuryRead, ...PERMISSIONS.operationsRead])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000006",
+    email: "demo.dop@paositra-demo.mg",
+    displayName: "[DEMO] Directeur Operations",
+    role: "DIRECTEUR_OPERATIONS",
+    usage: "Direction operations lecture, supervision et audit",
+    permissions: unique(["platform:audit:read", "platform:dashboard:read", ...PERMISSIONS.operationsRead])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000007",
+    email: "demo.chef.tana@paositra-demo.mg",
+    displayName: "[DEMO] Chef d'Agence Tana-Centre",
+    role: "CHEF_AGENCE",
+    usage: "Supervision agence Lot 2",
+    permissions: unique([
+      ...PERMISSIONS.operationsRead,
+      "operations:agencies:write",
+      "operations:agencies:validate",
+      "operations:agencies:close",
+      "operations:counters:manage",
+      "operations:financial:manage",
+      "operations:postal:manage",
+      "operations:parcels:manage",
+      "operations:transfers:manage",
+      "operations:day:validate",
+      "operations:fund:manage"
+    ])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000008",
+    email: "demo.caissier1@paositra-demo.mg",
+    displayName: "[DEMO] Caissier 1 Tana-Centre",
+    role: "CAISSIER",
+    usage: "Operations de caisse uniquement",
+    permissions: unique([
+      "operations:agencies:read",
+      "operations:counters:read",
+      "operations:counters:manage",
+      "operations:cash:open",
+      "operations:cash:operate",
+      "operations:cash:close",
+      "operations:financial:read",
+      "operations:postal:read",
+      "operations:parcels:read",
+      "operations:transfers:read"
+    ])
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000009",
+    email: "demo.verificateur@paositra-demo.mg",
+    displayName: "[DEMO] Verificateur",
+    role: "VERIFICATEUR",
+    usage: "Verification Lot 2",
+    permissions: unique([
+      "operations:agencies:read",
+      "operations:counters:read",
+      "operations:financial:read",
+      "operations:reports:read",
+      "operations:reports:export",
+      "operations:dashboard:read",
+      "operations:verification:read",
+      "operations:verification:validate",
+      "platform:notifications:read"
+    ])
+  },
+  {
+    id: "00000000-0000-4000-a000-00000000000a",
+    email: "demo.comptasieg@paositra-demo.mg",
+    displayName: "[DEMO] Comptable Siege",
+    role: "COMPTABLE_SIEGE",
+    usage: "Comptabilite siege Lot 2",
+    permissions: unique([
+      "operations:agencies:read",
+      "operations:financial:read",
+      "operations:reports:read",
+      "operations:reports:export",
+      "operations:dashboard:read",
+      "operations:verification:read",
+      "operations:fund:manage",
+      "platform:notifications:read",
+      "treasury:accounts:read",
+      "treasury:reports:read"
+    ])
+  },
   {
     id: "00000000-0000-4000-b000-000000000101",
     email: "demo.admin@paositra.local",
@@ -226,6 +382,22 @@ try {
     [USER_SPECS.map((user) => user.id)]
   );
   await client.query(
+    "UPDATE platform.users SET is_active=false, blocked_until=now(), updated_at=now() WHERE email = ANY($1)",
+    [LEGACY_TECHNICAL_EMAILS]
+  );
+  await client.query(
+    `DELETE FROM platform.user_permissions
+     WHERE user_id IN (SELECT id FROM platform.users WHERE email = ANY($1))`,
+    [LEGACY_TECHNICAL_EMAILS]
+  );
+  await client.query(
+    `UPDATE platform.sessions
+     SET revoked_at = now()
+     WHERE revoked_at IS NULL
+       AND user_id IN (SELECT id FROM platform.users WHERE email = ANY($1))`,
+    [LEGACY_TECHNICAL_EMAILS]
+  );
+  await client.query(
     `INSERT INTO platform.audit_events(id,actor_user_id,action,object_type,object_id,metadata)
      VALUES($1,$2,'demo.users.reset','platform.users',NULL,$3)`,
     [
@@ -233,6 +405,7 @@ try {
       USER_SPECS[0].id,
       JSON.stringify({
         emails: USER_SPECS.map((user) => user.email),
+        disabledTechnicalEmails: LEGACY_TECHNICAL_EMAILS,
         mode: "DEMO - NON CONTRACTUEL",
         passwordsPersistedInRepository: false
       })
