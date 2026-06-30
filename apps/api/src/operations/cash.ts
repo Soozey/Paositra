@@ -19,6 +19,31 @@ function billetageTotal(b: Record<string, unknown>): number {
   return DENOMS.reduce((s, d) => s + d * (Number(b?.[String(d)]) || 0), 0);
 }
 
+function scopedCashAgencyIds(req: AuthenticatedRequest) {
+  return [
+    ...new Set(
+      req.user.permissions
+        .filter((permission) =>
+          ["operations:cash:open", "operations:counters:read"].includes(permission.code) &&
+          permission.scopeType === "agency" &&
+          permission.scopeId
+        )
+        .map((permission) => permission.scopeId as string)
+    )
+  ];
+}
+
+function ensureCashScope(req: AuthenticatedRequest, agencyId: string, cashierUserId?: string) {
+  const scopedAgencyIds = scopedCashAgencyIds(req);
+  if (scopedAgencyIds.length === 0) return;
+  if (!scopedAgencyIds.includes(agencyId)) {
+    throw new ForbiddenException("Votre compte n'est pas rattaché à cette agence.");
+  }
+  if (cashierUserId && cashierUserId !== req.user.id) {
+    throw new ForbiddenException("Vous ne pouvez accéder qu'à votre propre caisse.");
+  }
+}
+
 export class OpenSessionDto {
   @IsString() agencyId!: string;
   @IsString() @MinLength(1) @MaxLength(80) registerLabel!: string;
@@ -46,17 +71,24 @@ export class CashController {
 
   @Get("cash/sessions")
   @RequirePermission("operations:counters:read")
-  async sessions() {
+  async sessions(@Req() req: AuthenticatedRequest) {
+    const scopedAgencyIds = scopedCashAgencyIds(req);
+    const where = scopedAgencyIds.length > 0 ? "WHERE s.agency_id = ANY($1::uuid[]) AND s.cashier_user_id = $2" : "";
+    const params = scopedAgencyIds.length > 0 ? [scopedAgencyIds, req.user.id] : [];
     return { items: await this.ds.query(
       `SELECT s.id, s.register_label AS "registerLabel", s.business_date AS "businessDate", s.status,
               s.opening_amount AS "openingAmount", s.declared_amount AS "declaredAmount",
               s.counted_amount AS "countedAmount", s.ecart, s.version, a.name AS "agencyName", a.code AS "agencyCode"
-       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id ORDER BY s.opened_at DESC`) };
+       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id ${where} ORDER BY s.opened_at DESC`,
+      params) };
   }
 
   @Get("cash/sessions/:id/operations")
   @RequirePermission("operations:counters:read")
-  async operations(@Param("id", ParseUUIDPipe) id: string) {
+  async operations(@Param("id", ParseUUIDPipe) id: string, @Req() req: AuthenticatedRequest) {
+    const session = await this.ds.query("SELECT agency_id, cashier_user_id FROM operations.cash_sessions WHERE id=$1", [id]);
+    if (!session.length) throw new NotFoundException("Caisse introuvable.");
+    ensureCashScope(req, session[0].agency_id, session[0].cashier_user_id);
     return this.ds.query(
       `SELECT id, code, op_type AS "opType", direction, amount, payment_mode AS "paymentMode",
               client_id_type AS "clientIdType", client_id_number AS "clientIdNumber", reference, status
@@ -69,6 +101,7 @@ export class CashController {
     const amount = billetageTotal(dto.billetage);
     const id = randomUUID();
     await this.ds.transaction(async (m) => {
+      ensureCashScope(req, dto.agencyId);
       const ag = await m.query("SELECT 1 FROM operations.agencies WHERE id=$1", [dto.agencyId]);
       if (!ag.length) throw new NotFoundException("Agence introuvable.");
       await m.query(
@@ -88,6 +121,7 @@ export class CashController {
     return this.ds.transaction(async (m) => {
       const s = await m.query("SELECT status, business_date, cashier_user_id, agency_id FROM operations.cash_sessions WHERE id=$1 FOR UPDATE", [id]);
       if (!s.length) throw new NotFoundException("Caisse introuvable.");
+      ensureCashScope(req, s[0].agency_id, s[0].cashier_user_id);
       if (s[0].status !== "ouverte") throw new ConflictException("La caisse n'est pas ouverte.");
       if (s[0].cashier_user_id !== req.user!.id) throw new ForbiddenException("Vous ne pouvez opérer que sur votre propre caisse.");
       const ag = await m.query("SELECT code FROM operations.agencies WHERE id=$1", [s[0].agency_id]);
@@ -112,9 +146,10 @@ export class CashController {
   async cancelOp(@Param("opId", ParseUUIDPipe) opId: string, @Body() dto: CancelOpDto, @Req() req: AuthenticatedRequest) {
     return this.ds.transaction(async (m) => {
       const r = await m.query(
-        `SELECT o.status, s.status AS sess, s.business_date, o.created_by FROM operations.cash_operations o
+        `SELECT o.status, s.status AS sess, s.business_date, s.agency_id, s.cashier_user_id, o.created_by FROM operations.cash_operations o
          JOIN operations.cash_sessions s ON s.id=o.session_id WHERE o.id=$1 FOR UPDATE`, [opId]);
       if (!r.length) throw new NotFoundException("Opération introuvable.");
+      ensureCashScope(req, r[0].agency_id, r[0].cashier_user_id);
       if (r[0].sess !== "ouverte") throw new ConflictException("Caisse clôturée ou validée : annulation impossible.");
       if (r[0].status !== "active") throw new ConflictException("Opération déjà annulée.");
       const today = new Date().toISOString().slice(0,10);
@@ -131,8 +166,9 @@ export class CashController {
   @RequirePermission("operations:cash:close")
   async close(@Param("id", ParseUUIDPipe) id: string, @Body() dto: CloseSessionDto, @Req() req: AuthenticatedRequest) {
     return this.ds.transaction(async (m) => {
-      const s = await m.query("SELECT status, opening_amount, version, cashier_user_id FROM operations.cash_sessions WHERE id=$1 FOR UPDATE", [id]);
+      const s = await m.query("SELECT status, opening_amount, version, cashier_user_id, agency_id FROM operations.cash_sessions WHERE id=$1 FOR UPDATE", [id]);
       if (!s.length) throw new NotFoundException("Caisse introuvable.");
+      ensureCashScope(req, s[0].agency_id, s[0].cashier_user_id);
       if (s[0].status !== "ouverte") throw new ConflictException("Seule une caisse ouverte peut être clôturée.");
       if (s[0].version !== dto.version) throw new ConflictException("Cette caisse a été modifiée entre-temps.");
       const mv = await m.query(
@@ -176,11 +212,13 @@ export class CashController {
   @RequirePermission("operations:counters:read")
   async ticket(@Param("opId", ParseUUIDPipe) opId: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const r = await this.ds.query(
-      `SELECT o.code, o.op_type, o.direction, o.amount, o.payment_mode, o.created_at, a.name AS agency
+      `SELECT o.code, o.op_type, o.direction, o.amount, o.payment_mode, o.created_at, a.name AS agency,
+              s.agency_id, s.cashier_user_id
        FROM operations.cash_operations o JOIN operations.cash_sessions s ON s.id=o.session_id
        JOIN operations.agencies a ON a.id=s.agency_id WHERE o.id=$1`, [opId]);
     if (!r.length) throw new NotFoundException("Opération introuvable.");
     const o = r[0];
+    ensureCashScope(req, o.agency_id, o.cashier_user_id);
     const buf = await buildPdf("Ticket d'opération", "[DOCUMENT DE DÉMONSTRATION] PAOSITRA — NON CONTRACTUEL",
       [["Code", o.code], ["Agence", o.agency], ["Type", o.op_type], ["Sens", o.direction],
        ["Montant", Number(o.amount).toLocaleString("fr-FR") + " MGA"], ["Mode", o.payment_mode]],

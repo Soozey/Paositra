@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 function countValue(value: Record<string, number>, denom: number) {
   const raw = value[String(denom)];
-  return raw == null || Number.isNaN(raw) ? "" : String(raw);
+  return raw == null || Number.isNaN(raw) ? "" : fmt(raw);
 }
 
 function updateCount(value: Record<string, number>, denom: number, raw: string) {
@@ -69,11 +69,25 @@ export function CashModule() {
   const canOperate = auth.hasPermission("operations:cash:operate");
   const canClose = auth.hasPermission("operations:cash:close");
   const canValidate = auth.hasPermission("operations:day:validate");
+  const scopedCashAgencyIds = [
+    ...new Set(
+      auth.user?.permissions
+        .filter((permission) =>
+          ["operations:cash:open", "operations:counters:read"].includes(permission.code) &&
+          permission.scopeType === "agency" &&
+          permission.scopeId
+        )
+        .map((permission) => permission.scopeId as string) ?? []
+    )
+  ];
+  const fixedAgencyId = scopedCashAgencyIds.length === 1 ? scopedCashAgencyIds[0] : null;
 
   const load = useCallback(async () => {
     try {
       const [ag, ss] = await Promise.all([
-        apiRequest<{ items: Agency[] }>("/api/v1/operations/agencies?page=1&pageSize=100", { token: auth.token }),
+        auth.hasPermission("operations:agencies:read")
+          ? apiRequest<{ items: Agency[] }>("/api/v1/operations/agencies?page=1&pageSize=100", { token: auth.token })
+          : Promise.resolve({ items: [] }),
         apiRequest<{ items: Session[] }>("/api/v1/operations/cash/sessions", { token: auth.token })
       ]);
       setAgencies(ag.items);
@@ -88,6 +102,11 @@ export function CashModule() {
       setActiveSessionId(null);
     }
   }, [activeSessionId, sessions]);
+  useEffect(() => {
+    if (fixedAgencyId && openForm.agencyId !== fixedAgencyId) {
+      setOpenForm((current) => ({ ...current, agencyId: fixedAgencyId }));
+    }
+  }, [fixedAgencyId, openForm.agencyId]);
 
   async function loadOps(id: string) {
     setActiveSessionId(id);
@@ -177,12 +196,21 @@ export function CashModule() {
         <section className="panel wide-panel">
           <h2>Ouvrir une caisse (billetage de début)</h2>
           <form onSubmit={openSession}>
-            <label>Agence
-              <select required value={openForm.agencyId} onChange={(e) => setOpenForm({ ...openForm, agencyId: e.target.value })}>
-                <option value="">Sélectionner</option>
-                {agencies.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.code})</option>)}
-              </select>
-            </label>
+            {fixedAgencyId ? (
+              <label>Agence
+                <input
+                  readOnly
+                  value={agencies.find((a) => a.id === fixedAgencyId)?.name ?? "Agence rattachée au compte"}
+                />
+              </label>
+            ) : (
+              <label>Agence
+                <select required value={openForm.agencyId} onChange={(e) => setOpenForm({ ...openForm, agencyId: e.target.value })}>
+                  <option value="">Sélectionner</option>
+                  {agencies.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.code})</option>)}
+                </select>
+              </label>
+            )}
             <label>Caisse / guichet
               <input required value={openForm.registerLabel} onChange={(e) => setOpenForm({ ...openForm, registerLabel: e.target.value })} />
             </label>

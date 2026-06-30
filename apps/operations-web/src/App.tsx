@@ -107,7 +107,7 @@ export function App() {
     <AppShell title="Gestion des opérations">
       {DEMO_MODE && (
         <div className="demo-banner">
-          MODE PRÉSENTATION — MODULES CONNECTÉS API UNIQUEMENT — AUCUNE DONNÉE MÉTIER FICTIVE
+          MODE PRÉSENTATION — DONNÉES NON CONTRACTUELLES
         </div>
       )}
       <AgenciesWorkspace />
@@ -144,6 +144,13 @@ function AgenciesWorkspace() {
   const [filterValidation, setFilterValidation] = useState("");
   const [filterRegion, setFilterRegion] = useState("");
   const [filterType, setFilterType] = useState("");
+  const isCashierOnly =
+    auth.hasPermission("operations:counters:read") &&
+    auth.hasPermission("operations:cash:open") &&
+    !auth.hasPermission("operations:agencies:write") &&
+    !auth.hasPermission("operations:agencies:validate") &&
+    !auth.hasPermission("operations:dashboard:read") &&
+    !auth.hasPermission("operations:verification:read");
 
   const load = useCallback(async () => {
     try {
@@ -176,15 +183,15 @@ function AgenciesWorkspace() {
   }, [load]);
 
   const visibleTabs: Array<{ id: OperationsTab; label: string }> = [
-    auth.hasPermission("operations:agencies:read") && { id: "agencies", label: "Agences" },
+    auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "agencies", label: "Agences" },
     auth.hasPermission("operations:counters:read") && { id: "caisses", label: "Caisses" },
     auth.hasPermission("operations:verification:read") && { id: "verification", label: "Verification" },
     auth.hasPermission("operations:dashboard:read") && { id: "opsdashboard", label: "Tableau de bord" },
     auth.hasPermission("operations:transfers:read") && { id: "valeurs", label: "Inter-agences" },
     auth.hasPermission("platform:notifications:read") && { id: "alertes", label: "Alertes" },
-    auth.hasPermission("operations:agencies:read") && { id: "referentiel", label: "Referentiel agences" },
+    auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "referentiel", label: "Referentiel agences" },
     auth.hasPermission("platform:roles:read") && { id: "roles", label: "Roles & habilitations" },
-    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Points a clarifier" },
+    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Parcours a cadrer" },
     auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
     auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
   ].filter(Boolean) as Array<{ id: OperationsTab; label: string }>;
@@ -268,14 +275,10 @@ function AgenciesWorkspace() {
 
   return (
     <>
-      <section className="panel module-home">
+      {!isCashierOnly && <section className="panel module-home">
         <div>
           <p className="eyebrow">LOT 2 — OPÉRATIONS</p>
-          <h2>Module agences opérationnel connecté au backend</h2>
-          <p className="muted">
-            Cette vue affiche uniquement les fonctions réellement reliées à l'API, aux permissions et à l'audit.
-            Les caisses, valeurs postales, G59/G60, AC et workflows non couverts par une route backend ne sont pas simulés.
-          </p>
+          <h2>Module agences opérationnel</h2>
         </div>
         <div className="kpi-grid">
           <div className="kpi-card">
@@ -302,7 +305,7 @@ function AgenciesWorkspace() {
             <small>Derniers événements chargés depuis l'API</small>
           </div>
         </div>
-      </section>
+      </section>}
       <nav className="tabs" aria-label="Modules operations">
         {visibleTabs.map((item) => (
           <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>
@@ -771,14 +774,14 @@ const clarificationSections = [
   {
     num: 11,
     title: "Reporting réglementaire",
-    statut: "absent",
-    contenu: "Les modèles de rapports officiels (formats, fréquences, destinataires) ne sont pas dans le DAO. PAOMA doit fournir les gabarits G59, G60 et les règles d'envoi."
+    statut: "démo front",
+    contenu: "Parcours représenté en démonstration front. Les modèles de rapports officiels, formats, fréquences, destinataires et règles G59/G60 restent à valider par PAOMA."
   },
   {
     num: 12,
     title: "Intégration systèmes externes",
-    statut: "absent",
-    contenu: "Les intégrations BCM, banques, CCP, plateforme de paiement mobile ne sont pas couvertes. Les contrats d'interface (formats, protocoles, fréquences) sont à définir."
+    statut: "démo front",
+    contenu: "Parcours représenté en démonstration front. Les intégrations BCM, banques, CCP et paiement mobile nécessitent des contrats d'interface validés par PAOMA."
   },
   {
     num: 13,
@@ -793,13 +796,13 @@ function PointsAClarifier({ lot }: { lot: "lot1" | "lot2" }) {
 
   return (
     <section className="panel">
-      <h2>Points à clarifier avec PAOMA</h2>
+      <h2>Parcours à cadrer avec PAOMA</h2>
       <p className="muted">
-        Ces points sont des blocages ou propositions identifiés lors de l'analyse du DAO {lot === "lot1" ? "Lot 1 (Trésorerie)" : "Lot 2 (Opérations)"}.
-        Ils ne peuvent pas être traités sans décision formelle de PAOMA.
+        Ces parcours représentent les fonctions à cadrer issues de l'analyse du DAO {lot === "lot1" ? "Lot 1 (Trésorerie)" : "Lot 2 (Opérations)"}.
+        Ils restent à valider formellement par PAOMA avant activation comme règles définitives.
       </p>
       <Message type="info">
-        Le DAO reste la référence contractuelle. Aucune de ces propositions n'est implémentée comme règle définitive.
+        Le DAO reste la référence contractuelle. Ces parcours de démonstration ne remplacent pas les règles définitives PAOMA.
       </Message>
       {clarificationSections.map((section) => (
         <div className="clarify-section" key={section.num}>

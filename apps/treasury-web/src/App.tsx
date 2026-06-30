@@ -104,7 +104,7 @@ export function App() {
     <AppShell title="Gestion de la Trésorerie">
       {DEMO_MODE && (
         <div className="demo-banner">
-          MODE PRÉSENTATION — MODULES CONNECTÉS API UNIQUEMENT — AUCUNE DONNÉE MÉTIER FICTIVE
+          MODE PRÉSENTATION — DONNÉES NON CONTRACTUELLES
         </div>
       )}
       <TreasuryWorkspace />
@@ -182,7 +182,7 @@ function TreasuryWorkspace() {
     auth.hasPermission("treasury:dashboard:read") && { id: "dashboard", label: "Tableau de bord" },
     auth.hasPermission("treasury:institutions:read") && { id: "institutions", label: "Institutions" },
     auth.hasPermission("platform:roles:read") && { id: "roles", label: "Roles & habilitations" },
-    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Points a clarifier" },
+    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Parcours a cadrer" },
     auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
     auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
   ].filter(Boolean) as Array<{ id: TreasuryTab; label: string }>;
@@ -357,11 +357,7 @@ function TreasuryWorkspace() {
       <section className="panel module-home">
         <div>
           <p className="eyebrow">LOT 1 — TRÉSORERIE</p>
-          <h2>Modules opérationnels connectés au backend</h2>
-          <p className="muted">
-            Cette vue affiche uniquement les fonctions réellement reliées à l'API, aux permissions et à l'audit.
-            Les modules DAO non couverts par une route backend ne sont pas présentés comme utilisables.
-          </p>
+          <h2>Modules opérationnels</h2>
         </div>
         <div className="kpi-grid">
           <div className="kpi-card">
@@ -657,13 +653,13 @@ function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
 const treasuryClarifications = [
   { num: 1, title: "Matrice des rôles Lot 1", statut: "à clarifier", contenu: "Profils Lot 1 (directeur trésorerie, gestionnaire placement, trésorier, contrôleur), périmètres d'organe et délégations à définir contractuellement par PAOMA." },
   { num: 2, title: "Calculs financiers placements", statut: "à clarifier", contenu: "Formules d'intérêts (exact/365, 30/360, etc.), arrondi, fiscalité et pénalités de rupture non définies dans le DAO. À valider avant activation du moteur." },
-  { num: 3, title: "Référentiel institutions financières", statut: "absent", contenu: "La liste des banques et institutions autorisées pour les placements PAOMA doit être fournie officiellement. Aucun seed métier n'est présent." },
+  { num: 3, title: "Référentiel institutions financières", statut: "démo front", contenu: "Parcours représenté en démonstration front. La liste des banques et institutions autorisées doit être validée par PAOMA avant usage officiel." },
   { num: 4, title: "Workflows de placement", statut: "partiel", contenu: "Ouverture et annulation sont implémentés. Renouvellement, rapatriement principal/intérêts et prolongation nécessitent des règles métier validées." },
   { num: 5, title: "Référentiel comptable trésorerie", statut: "à clarifier", contenu: "PCOP 2006 utilisé comme cadrage. Comptes, journaux et schémas débit/crédit pour placements, virements et rapprochements doivent être validés par PAOMA." },
-  { num: 6, title: "Facturation et recouvrement", statut: "absent", contenu: "Module non couvert par une route backend. CPS, modèles de factures, workflow de réclamation et règles de rapprochement à définir." },
-  { num: 7, title: "Comptes en devises", statut: "absent", contenu: "Comptes réels, taux de change, règles comptables et formats d'import bancaire à fournir par PAOMA." },
-  { num: 8, title: "Rapprochement bancaire", statut: "absent", contenu: "Formats des relevés bancaires (SWIFT, MT940, CSV banque), tolérances et règles de traitement des anomalies à définir." },
-  { num: 9, title: "Reporting réglementaire Lot 1", statut: "absent", contenu: "Modèles de rapports officiels (périodicité, format, destinataires institutionnels) non définis dans le DAO." },
+  { num: 6, title: "Facturation et recouvrement", statut: "démo front", contenu: "Parcours représenté en démonstration front. CPS, modèles de factures, workflow de réclamation et règles de rapprochement à valider par PAOMA avant persistance officielle." },
+  { num: 7, title: "Comptes en devises", statut: "démo front", contenu: "Parcours représenté en démonstration front. Comptes réels, taux de change, règles comptables et formats d'import bancaire à valider par PAOMA." },
+  { num: 8, title: "Rapprochement bancaire", statut: "démo front", contenu: "Parcours représenté en démonstration front. Formats de relevés, tolérances et règles de traitement des anomalies à valider par PAOMA." },
+  { num: 9, title: "Reporting réglementaire Lot 1", statut: "démo front", contenu: "Parcours représenté en démonstration front. Les modèles de rapports officiels, périodicités et destinataires restent à valider par PAOMA." },
   { num: 10, title: "Interopérabilité Lot 1 / Lot 2", statut: "à clarifier", contenu: "Les flux AC (accusés de crédit), rapatriements et virements entre trésorerie centrale et agences nécessitent une définition contractuelle des interfaces." }
 ];
 
@@ -672,13 +668,13 @@ function TreasuryPointsAClarifier() {
 
   return (
     <section className="panel">
-      <h2>Points à clarifier avec PAOMA — Lot 1 Trésorerie</h2>
+      <h2>Parcours à cadrer avec PAOMA — Lot 1 Trésorerie</h2>
       <p className="muted">
-        Ces points sont des blocages ou propositions identifiés lors de l'analyse du DAO Lot 1.
-        Ils ne peuvent pas être traités sans décision formelle de PAOMA.
+        Ces parcours représentent les fonctions à cadrer issues de l'analyse du DAO Lot 1.
+        Ils restent à valider formellement par PAOMA avant activation comme règles définitives.
       </p>
       <Message type="info">
-        Le DAO reste la référence contractuelle. Aucune de ces propositions n'est implémentée comme règle définitive.
+        Le DAO reste la référence contractuelle. Ces parcours de démonstration ne remplacent pas les règles définitives PAOMA.
       </Message>
       {treasuryClarifications.map((section) => (
         <div className="clarify-section" key={section.num}>

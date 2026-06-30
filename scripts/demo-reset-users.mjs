@@ -119,6 +119,15 @@ const LEGACY_TECHNICAL_EMAILS = [
   "viewer.local@paositra.invalid"
 ];
 
+const CASHIER_PERMISSIONS = [
+  "operations:counters:read",
+  "operations:counters:manage",
+  "operations:cash:open",
+  "operations:cash:operate",
+  "operations:cash:close"
+];
+const CASHIER_SCOPED_PERMISSIONS = new Set(CASHIER_PERMISSIONS);
+
 const USER_SPECS = [
   {
     id: "00000000-0000-4000-a000-000000000001",
@@ -218,19 +227,45 @@ const USER_SPECS = [
     email: "demo.caissier1@paositra-demo.mg",
     displayName: "[DEMO] Caissier 1 Tana-Centre",
     role: "CAISSIER",
-    usage: "Operations de caisse uniquement",
-    permissions: unique([
-      "operations:agencies:read",
-      "operations:counters:read",
-      "operations:counters:manage",
-      "operations:cash:open",
-      "operations:cash:operate",
-      "operations:cash:close",
-      "operations:financial:read",
-      "operations:postal:read",
-      "operations:parcels:read",
-      "operations:transfers:read"
-    ])
+    usage: "Operations de caisse uniquement - agence 67Ha",
+    agencyCode: "TMP-PF-ANA-TNR-008",
+    permissions: CASHIER_PERMISSIONS
+  },
+  {
+    id: "00000000-0000-4000-a000-00000000000b",
+    email: "demo.caissier.ambanidia@paositra-demo.mg",
+    displayName: "[DEMO] Caissier Ambanidia",
+    role: "CAISSIER",
+    usage: "Operations de caisse uniquement - agence Ambanidia",
+    agencyCode: "TMP-PF-ANA-TNR-001",
+    permissions: CASHIER_PERMISSIONS
+  },
+  {
+    id: "00000000-0000-4000-a000-00000000000c",
+    email: "demo.caissier.analakely@paositra-demo.mg",
+    displayName: "[DEMO] Caissier Analakely",
+    role: "CAISSIER",
+    usage: "Operations de caisse uniquement - agence Analakely",
+    agencyCode: "TMP-PF-ANA-TNR-002",
+    permissions: CASHIER_PERMISSIONS
+  },
+  {
+    id: "00000000-0000-4000-a000-00000000000d",
+    email: "demo.caissier.andoharanofotsy@paositra-demo.mg",
+    displayName: "[DEMO] Caissier Andoharanofotsy",
+    role: "CAISSIER",
+    usage: "Operations de caisse uniquement - agence Andoharanofotsy",
+    agencyCode: "TMP-PF-ANA-TNR-003",
+    permissions: CASHIER_PERMISSIONS
+  },
+  {
+    id: "00000000-0000-4000-a000-00000000000e",
+    email: "demo.caissier.andravoahangy@paositra-demo.mg",
+    displayName: "[DEMO] Caissier Andravoahangy",
+    role: "CAISSIER",
+    usage: "Operations de caisse uniquement - agence Andravoahangy",
+    agencyCode: "TMP-PF-ANA-TNR-004",
+    permissions: CASHIER_PERMISSIONS
   },
   {
     id: "00000000-0000-4000-a000-000000000009",
@@ -349,6 +384,18 @@ try {
     );
   }
 
+  const agencyByCode = new Map();
+  for (const user of USER_SPECS.filter((item) => item.agencyCode)) {
+    const agency = await client.query(
+      "SELECT id, name, code FROM operations.agencies WHERE code = $1 OR codique = $1 OR temporary_code = $1 LIMIT 1",
+      [user.agencyCode]
+    );
+    if (!agency.rowCount) {
+      throw new Error(`Agence introuvable pour ${user.email}: ${user.agencyCode}`);
+    }
+    agencyByCode.set(user.agencyCode, agency.rows[0]);
+  }
+
   const output = [];
   for (const user of USER_SPECS) {
     const tempPassword = password();
@@ -366,6 +413,7 @@ try {
       [user.id, user.email, user.displayName, await bcrypt.hash(tempPassword, 12)]
     );
     await client.query("DELETE FROM platform.user_permissions WHERE user_id = $1", [user.id]);
+    const agency = user.agencyCode ? agencyByCode.get(user.agencyCode) : null;
     for (const code of user.permissions) {
       await client.query(
         `INSERT INTO platform.user_permissions(id,user_id,permission_code,scope_type,scope_id,granted_by)
@@ -373,8 +421,16 @@ try {
          ON CONFLICT DO NOTHING`,
         [randomUUID(), user.id, code, USER_SPECS[0].id]
       );
+      if (agency && CASHIER_SCOPED_PERMISSIONS.has(code)) {
+        await client.query(
+          `INSERT INTO platform.user_permissions(id,user_id,permission_code,scope_type,scope_id,granted_by)
+           VALUES($1,$2,$3,'agency',$4,$5)
+           ON CONFLICT DO NOTHING`,
+          [randomUUID(), user.id, code, agency.id, USER_SPECS[0].id]
+        );
+      }
     }
-    output.push({ ...user, password: tempPassword });
+    output.push({ ...user, password: tempPassword, agencyName: agency?.name ?? null });
   }
 
   await client.query(
@@ -405,6 +461,10 @@ try {
       USER_SPECS[0].id,
       JSON.stringify({
         emails: USER_SPECS.map((user) => user.email),
+        agencyScopedCashiers: USER_SPECS.filter((user) => user.agencyCode).map((user) => ({
+          email: user.email,
+          agencyCode: user.agencyCode
+        })),
         disabledTechnicalEmails: LEGACY_TECHNICAL_EMAILS,
         mode: "DEMO - NON CONTRACTUEL",
         passwordsPersistedInRepository: false
@@ -416,7 +476,7 @@ try {
 
   console.log("Comptes demo locaux regeneres. Mots de passe affiches une seule fois:");
   output.forEach((user, index) => {
-    console.log(`Compte ${index + 1} | ${user.email} | ${user.password} | ${user.role} | ${user.usage}`);
+    console.log(`Compte ${index + 1} | ${user.email} | ${user.password} | ${user.role} | ${user.usage}${user.agencyName ? ` | ${user.agencyName}` : ""}`);
   });
 } catch (error) {
   await client.query("ROLLBACK");

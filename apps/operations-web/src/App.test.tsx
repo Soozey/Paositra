@@ -105,7 +105,7 @@ describe("Operations application shell", () => {
     const billetInput = screen.getByLabelText(/20[\s\u202f]?000/);
     await userEvent.type(billetInput, "1000");
 
-    expect(billetInput).toHaveValue("1000");
+    expect((billetInput as HTMLInputElement).value).toMatch(/^1[\s\u202f]000$/);
     expect(document.activeElement).toBe(billetInput);
     expect(screen.getByText(/20[\s\u202f]?000[\s\u202f]?000 MGA/)).toBeInTheDocument();
   });
