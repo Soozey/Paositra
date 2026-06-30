@@ -888,7 +888,7 @@ function AgenciesWorkspace() {
       const [agencyResult, auditResult, rolesResult] = await Promise.all([
         auth.hasPermission("operations:agencies:read")
           ? apiRequest<Paged<Agency>>(
-              "/api/v1/operations/agencies?pageSize=200",
+              "/api/v1/operations/agencies?pageSize=100",
               { token: auth.token }
             )
           : Promise.resolve({ items: [], total: 0 }),
