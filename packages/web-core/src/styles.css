@@ -613,8 +613,29 @@ button {
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   gap: 20px;
+  align-items: start;
+}
+
+.wide-panel {
+  grid-column: 1 / -1;
+}
+
+.work-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.form-grid button {
+  min-height: 44px;
 }
 
 .panel {
@@ -715,13 +736,17 @@ th {
 
 /* Modules 4-9 — éléments d'écran */
 .billetage { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 8px 0; }
-.billetage-item { display: flex; flex-direction: column; font-size: 0.8rem; width: 90px; }
+.billetage-item { display: flex; flex: 1 1 90px; max-width: 110px; flex-direction: column; font-size: 0.8rem; }
 .billetage-item input { width: 100%; }
-.billetage strong { margin-left: auto; }
-.subtable { margin-top: 10px; padding: 10px; background: #f6f8f9; border-radius: 8px; }
+.billetage strong { margin-left: auto; padding-bottom: 10px; white-space: nowrap; }
+.subtable { margin-top: 10px; padding: 10px; background: #f6f8f9; border-radius: 8px; overflow-x: auto; }
 .subtable table { font-size: 0.9rem; }
-.inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-.inline-form input, .inline-form select { min-width: 120px; }
+.inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 8px; }
+.inline-form input, .inline-form select { flex: 1 1 180px; min-width: min(100%, 180px); }
+.operation-form,
+.closing-form {
+  margin-top: 4px;
+}
 button.link { background: none; border: none; color: #1f4e79; cursor: pointer; text-decoration: underline; padding: 0 6px; font: inherit; }
 button.link.danger { color: #8b1427; }
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }

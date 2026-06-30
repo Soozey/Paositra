@@ -27,6 +27,7 @@ export function CashModule() {
   const [closeBill, setCloseBill] = useState<Record<string, number>>({});
   const [opForm, setOpForm] = useState({ opType: "Mandat national", direction: "encaissement", amount: "", paymentMode: "especes", clientIdType: "", clientIdNumber: "" });
   const [closing, setClosing] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -48,8 +49,14 @@ export function CashModule() {
     }
   }, [auth.token]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (activeSessionId && !sessions.some((s) => s.id === activeSessionId)) {
+      setActiveSessionId(null);
+    }
+  }, [activeSessionId, sessions]);
 
   async function loadOps(id: string) {
+    setActiveSessionId(id);
     try {
       const r = await apiRequest<CashOp[]>(`/api/v1/operations/cash/sessions/${id}/operations`, { token: auth.token });
       setOps((prev) => ({ ...prev, [id]: r }));
@@ -68,6 +75,7 @@ export function CashModule() {
       setMsg({ type: "success", text: `Caisse ouverte avec ${fmt(billetageTotal(openBill))} MGA de fond.` });
       setOpenBill({});
       await load();
+      setActiveSessionId(null);
     } catch (e) { setMsg({ type: "error", text: e instanceof Error ? e.message : "Ouverture impossible." }); }
     finally { setLoading(false); }
   }
@@ -138,11 +146,14 @@ export function CashModule() {
     );
   }
 
+  const activeSession = activeSessionId ? sessions.find((s) => s.id === activeSessionId) ?? null : null;
+  const activeOps = activeSession ? ops[activeSession.id] : undefined;
+
   return (
     <div className="grid">
-      {msg && <Message type={msg.type}>{msg.text}</Message>}
+      {msg && <div className="wide-panel"><Message type={msg.type}>{msg.text}</Message></div>}
       {canOpen && (
-        <section className="panel">
+        <section className="panel wide-panel">
           <h2>Ouvrir une caisse (billetage de début)</h2>
           <form onSubmit={openSession}>
             <label>Agence
@@ -162,16 +173,14 @@ export function CashModule() {
           </form>
         </section>
       )}
-      <section className="panel">
+      <section className="panel wide-panel">
         <h2>Caisses</h2>
         {sessions.length === 0 ? <p className="empty">Aucune caisse ouverte. {canOpen ? "Ouvrez-en une ci-contre." : ""}</p> : (
           <div className="table-wrap">
             <table>
               <thead><tr><th>Agence</th><th>Caisse</th><th>Date</th><th>Fond</th><th>Écart</th><th>État</th><th>Actions</th></tr></thead>
               <tbody>
-                {sessions.map((s) => {
-                  const list = ops[s.id];
-                  return (
+                {sessions.map((s) => (
                   <tr key={s.id}>
                     <td>{s.agencyName}</td>
                     <td>{s.registerLabel}</td>
@@ -181,62 +190,98 @@ export function CashModule() {
                     <td>{STATUS_LABEL[s.status] ?? s.status}</td>
                     <td>
                       <div className="actions">
-                        <button className="secondary" onClick={() => void loadOps(s.id)}>Opérations</button>
-                        {s.status === "ouverte" && canClose && <button className="secondary" onClick={() => setClosing(closing === s.id ? null : s.id)}>Clôturer</button>}
+                        <button className={activeSessionId === s.id ? "primary" : "secondary"} onClick={() => void loadOps(s.id)}>Opérations</button>
+                        {s.status === "ouverte" && canClose && (
+                          <button
+                            className="secondary"
+                            onClick={() => {
+                              setActiveSessionId(s.id);
+                              setClosing(closing === s.id ? null : s.id);
+                              if (!ops[s.id]) void loadOps(s.id);
+                            }}
+                          >
+                            Clôturer
+                          </button>
+                        )}
                         {s.status === "fermee" && canValidate && <button className="secondary" onClick={() => void validateDay(s, "valider")}>Valider journée</button>}
                         {s.status === "fermee" && canValidate && <button className="danger" onClick={() => void validateDay(s, "refuser")}>Refuser</button>}
                       </div>
-                      {list && (
-                        <div className="subtable">
-                          {list.length === 0 ? <p className="empty">Aucune opération.</p> : (
-                            <table>
-                              <thead><tr><th>Code</th><th>Type</th><th>Sens</th><th>Montant</th><th>Mode</th><th>État</th><th></th></tr></thead>
-                              <tbody>
-                                {list.map((o) => (
-                                  <tr key={o.id}>
-                                    <td>{o.code}</td><td>{o.opType}</td><td>{o.direction}</td><td>{fmt(o.amount)}</td><td>{o.paymentMode}</td>
-                                    <td>{o.status === "active" ? "Active" : "Annulée"}</td>
-                                    <td>
-                                      <button className="link" onClick={() => void downloadFile(auth.token, `/api/v1/operations/cash/operations/${o.id}/ticket.pdf`, `ticket-${o.code}.pdf`).then((e) => e && setMsg({ type: "error", text: e }))}>Ticket</button>
-                                      {s.status === "ouverte" && o.status === "active" && canOperate && <button className="link danger" onClick={() => void cancelOp(o.id, s.id)}>Annuler</button>}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                          {s.status === "ouverte" && canOperate && (
-                            <form onSubmit={(e) => addOp(e, s.id)} className="inline-form">
-                              <input placeholder="Type d'opération" required value={opForm.opType} onChange={(e) => setOpForm({ ...opForm, opType: e.target.value })} />
-                              <select value={opForm.direction} onChange={(e) => setOpForm({ ...opForm, direction: e.target.value })}>
-                                <option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option>
-                              </select>
-                              <AmountInput placeholder="Montant" required value={opForm.amount} onValueChange={(value) => setOpForm({ ...opForm, amount: value })} />
-                              <select value={opForm.paymentMode} onChange={(e) => setOpForm({ ...opForm, paymentMode: e.target.value })}>
-                                <option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="credit">Crédit</option>
-                              </select>
-                              <input placeholder="N° CIN (optionnel)" value={opForm.clientIdNumber} onChange={(e) => setOpForm({ ...opForm, clientIdNumber: e.target.value, clientIdType: e.target.value ? "CIN" : "" })} />
-                              <button className="primary" disabled={loading} type="submit">Enregistrer l'opération</button>
-                            </form>
-                          )}
-                          {closing === s.id && s.status === "ouverte" && (
-                            <form onSubmit={(e) => closeSession(e, s)}>
-                              <h3>Billetage de fin de journée</h3>
-                              <BilletageInputs value={closeBill} onChange={setCloseBill} />
-                              <button className="primary" disabled={loading} type="submit">Confirmer la clôture</button>
-                            </form>
-                          )}
-                        </div>
-                      )}
                     </td>
                   </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </section>
+      {activeSession && (
+        <section className="panel wide-panel work-panel">
+          <div className="panel-head">
+            <div>
+              <h2>Opérations de caisse</h2>
+              <p className="muted">{activeSession.agencyName} / {activeSession.registerLabel} / {activeSession.businessDate}</p>
+            </div>
+            <span className="badge">{STATUS_LABEL[activeSession.status] ?? activeSession.status}</span>
+          </div>
+
+          {activeOps === undefined ? (
+            <p className="empty">Chargement des opérations...</p>
+          ) : activeOps.length === 0 ? (
+            <p className="empty">Aucune opération.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Code</th><th>Type</th><th>Sens</th><th>Montant</th><th>Mode</th><th>État</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {activeOps.map((o) => (
+                    <tr key={o.id}>
+                      <td>{o.code}</td><td>{o.opType}</td><td>{o.direction}</td><td>{fmt(o.amount)}</td><td>{o.paymentMode}</td>
+                      <td>{o.status === "active" ? "Active" : "Annulée"}</td>
+                      <td>
+                        <button className="link" onClick={() => void downloadFile(auth.token, `/api/v1/operations/cash/operations/${o.id}/ticket.pdf`, `ticket-${o.code}.pdf`).then((e) => e && setMsg({ type: "error", text: e }))}>Ticket</button>
+                        {activeSession.status === "ouverte" && o.status === "active" && canOperate && <button className="link danger" onClick={() => void cancelOp(o.id, activeSession.id)}>Annuler</button>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeSession.status === "ouverte" && canOperate && (
+            <form onSubmit={(e) => addOp(e, activeSession.id)} className="form-grid operation-form">
+              <label>Type d'opération
+                <input required value={opForm.opType} onChange={(e) => setOpForm({ ...opForm, opType: e.target.value })} />
+              </label>
+              <label>Sens
+                <select value={opForm.direction} onChange={(e) => setOpForm({ ...opForm, direction: e.target.value })}>
+                  <option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option>
+                </select>
+              </label>
+              <label>Montant
+                <AmountInput required value={opForm.amount} onValueChange={(value) => setOpForm({ ...opForm, amount: value })} />
+              </label>
+              <label>Mode de paiement
+                <select value={opForm.paymentMode} onChange={(e) => setOpForm({ ...opForm, paymentMode: e.target.value })}>
+                  <option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="credit">Crédit</option>
+                </select>
+              </label>
+              <label>N° CIN (optionnel)
+                <input value={opForm.clientIdNumber} onChange={(e) => setOpForm({ ...opForm, clientIdNumber: e.target.value, clientIdType: e.target.value ? "CIN" : "" })} />
+              </label>
+              <button className="primary" disabled={loading} type="submit">Enregistrer l'opération</button>
+            </form>
+          )}
+
+          {closing === activeSession.id && activeSession.status === "ouverte" && (
+            <form onSubmit={(e) => closeSession(e, activeSession)} className="closing-form">
+              <h3>Billetage de fin de journée</h3>
+              <BilletageInputs value={closeBill} onChange={setCloseBill} />
+              <button className="primary" disabled={loading} type="submit">Confirmer la clôture</button>
+            </form>
+          )}
+        </section>
+      )}
     </div>
   );
 }
