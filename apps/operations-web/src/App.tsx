@@ -185,7 +185,7 @@ function AgenciesWorkspace() {
   const visibleTabs: Array<{ id: OperationsTab; label: string }> = [
     auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "agencies", label: "Agences" },
     auth.hasPermission("operations:counters:read") && { id: "caisses", label: "Caisses" },
-    auth.hasPermission("operations:verification:read") && { id: "verification", label: "Verification" },
+    auth.hasPermission("operations:verification:read") && { id: "verification", label: "Vérification" },
     auth.hasPermission("operations:dashboard:read") && { id: "opsdashboard", label: "Tableau de bord" },
     auth.hasPermission("operations:transfers:read") && { id: "valeurs", label: "Inter-agences" },
     auth.hasPermission("platform:notifications:read") && { id: "alertes", label: "Alertes" },

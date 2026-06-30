@@ -105,7 +105,7 @@ export function VerificationModule() {
             </label>
             <label>Période<input type="date" required value={vForm.periodDate} onChange={(e) => setVForm({ ...vForm, periodDate: e.target.value })} /></label>
             <label>Solde attendu<AmountInput required value={vForm.expectedBalance} onValueChange={(value) => setVForm({ ...vForm, expectedBalance: value })} /></label>
-            <label>Solde constate<AmountInput required value={vForm.countedBalance} onValueChange={(value) => setVForm({ ...vForm, countedBalance: value })} /></label>
+            <label>Solde constaté<AmountInput required value={vForm.countedBalance} onValueChange={(value) => setVForm({ ...vForm, countedBalance: value })} /></label>
             <label>Justification (obligatoire si écart)<input maxLength={1000} value={vForm.justification} onChange={(e) => setVForm({ ...vForm, justification: e.target.value })} /></label>
             <button className="primary" disabled={loading} type="submit">Enregistrer la vérification</button>
           </form>
