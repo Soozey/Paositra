@@ -185,6 +185,17 @@ export class CashController {
       await this.audit.record(m, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
         action: "operations.cash.closed", objectType: "operations.cash_session", objectId: id,
         afterState: { expected, counted, ecart }, ...requestMetadata(req) });
+      if (ecart !== 0) {
+        const ag = await m.query("SELECT a.name, s.register_label AS reg FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id WHERE s.id=$1", [id]);
+        const signe = ecart > 0 ? "excédent" : "déficit";
+        const montant = Math.abs(ecart).toLocaleString("fr-FR");
+        await m.query(
+          `INSERT INTO platform.notifications(id,user_id,type,message,object_type,object_id)
+           VALUES($1,NULL,$2,$3,'operations.cash_session',$4)`,
+          [randomUUID(), "ecart_caisse",
+           `Écart caisse (${signe} ${montant} MGA) — ${ag[0]?.name ?? "?"} / ${ag[0]?.reg ?? "?"} le ${dto.billetage ? new Date().toISOString().slice(0,10) : "?"}`,
+           id]);
+      }
       return { id, expected, counted, ecart, status: "fermee" };
     });
   }

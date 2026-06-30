@@ -57,7 +57,7 @@ export class VerificationController {
       throw new ConflictException("Une justification est obligatoire en cas d'écart (déficit ou excédent).");
     const id = randomUUID();
     await this.ds.transaction(async (m) => {
-      const ag = await m.query("SELECT 1 FROM operations.agencies WHERE id=$1", [dto.agencyId]);
+      const ag = await m.query("SELECT name FROM operations.agencies WHERE id=$1", [dto.agencyId]);
       if (!ag.length) throw new NotFoundException("Agence introuvable.");
       await m.query(
         `INSERT INTO operations.verifications(id,agency_id,period_date,expected_balance,counted_balance,ecart,status,justification,verifier_user_id)
@@ -66,6 +66,15 @@ export class VerificationController {
       await this.audit.record(m, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
         action: "operations.verification.created", objectType: "operations.verification", objectId: id,
         afterState: { ecart, status }, ...requestMetadata(req) });
+      if (ecart !== 0) {
+        const signe = ecart < 0 ? "déficit" : "excédent";
+        const montant = Math.abs(ecart).toLocaleString("fr-FR");
+        await m.query(
+          `INSERT INTO platform.notifications(id,user_id,type,message,object_type,object_id)
+           VALUES($1,NULL,$2,$3,'operations.verification',$4)`,
+          [randomUUID(), "anomalie_verification",
+           `Anomalie vérification (${signe} ${montant} MGA) — ${ag[0].name} période ${dto.periodDate}`, id]);
+      }
     });
     return { id, ecart, status };
   }

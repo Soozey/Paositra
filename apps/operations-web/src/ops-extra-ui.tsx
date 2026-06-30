@@ -8,7 +8,7 @@ interface OpsKpi {
   chiffreAffairesDemo: number; anomaliesVerification: number; journeesAValider: number; demandesValeursEnCours: number;
 }
 interface ValueReq { id: string; reference: string; valueType: string; amount: string; status: string; version: number; fromAgency: string; toAgency: string }
-interface Notif { id: string; type: string; message: string; isRead: boolean; createdAt: string }
+interface Notif { id: string; type: string; message: string; isRead: boolean; createdAt: string; isVirtual?: boolean }
 
 const VRSTATUS: Record<string, string> = { demande: "Demande", notifiee: "Notifiée", traitee: "Traitée", rejetee: "Rejetée" };
 
@@ -135,7 +135,7 @@ export function AlertsPanel() {
           <tbody>{data.items.map((n) => (
             <tr key={n.id} className={n.isRead ? "" : "unread"}>
               <td>{n.type}</td><td>{n.message}</td><td>{new Date(n.createdAt).toLocaleString("fr-FR")}</td>
-              <td>{!n.isRead && <button className="link" onClick={() => void markRead(n.id)}>Marquer lu</button>}</td>
+              <td>{!n.isRead && !n.isVirtual && <button className="link" onClick={() => void markRead(n.id)}>Marquer lu</button>}</td>
             </tr>
           ))}</tbody>
         </table></div>

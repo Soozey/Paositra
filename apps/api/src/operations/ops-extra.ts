@@ -31,9 +31,35 @@ export class NotificationsController {
   @Get("notifications")
   @RequirePermission("platform:notifications:read")
   async list(@Req() req: AuthenticatedRequest) {
-    const items = await this.ds.query(
+    const persisted = await this.ds.query(
       `SELECT id, type, message, object_type AS "objectType", object_id AS "objectId", is_read AS "isRead", created_at AS "createdAt"
        FROM platform.notifications WHERE user_id = $1 OR user_id IS NULL ORDER BY is_read ASC, created_at DESC LIMIT 50`, [req.user!.id]);
+    const today = new Date().toISOString().slice(0, 10);
+    const unclosed = await this.ds.query(
+      `SELECT s.id, a.name AS agency_name, s.register_label AS reg, s.business_date
+       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id
+       WHERE s.status='ouverte' AND s.business_date < $1 ORDER BY s.business_date`, [today]);
+    const pending = await this.ds.query(
+      `SELECT s.id, a.name AS agency_name, s.register_label AS reg, s.business_date
+       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id
+       WHERE s.status='fermee' ORDER BY s.closed_at DESC LIMIT 20`);
+    const virtual = [
+      ...unclosed.map((s: { id: string; agency_name: string; reg: string; business_date: string }) => ({
+        id: `virt-unclosed-${s.id}`,
+        type: "caisse_non_cloturee",
+        message: `Caisse non clôturée — ${s.agency_name} / ${s.reg} (journée du ${s.business_date})`,
+        objectType: "operations.cash_session", objectId: s.id,
+        isRead: false, createdAt: new Date().toISOString(), isVirtual: true
+      })),
+      ...pending.map((s: { id: string; agency_name: string; reg: string; business_date: string }) => ({
+        id: `virt-pending-${s.id}`,
+        type: "journee_en_attente",
+        message: `Journée en attente de validation — ${s.agency_name} / ${s.reg} (${s.business_date})`,
+        objectType: "operations.cash_session", objectId: s.id,
+        isRead: false, createdAt: new Date().toISOString(), isVirtual: true
+      }))
+    ];
+    const items = [...virtual, ...persisted];
     const unread = items.filter((n: { isRead: boolean }) => !n.isRead).length;
     return { unread, items };
   }
