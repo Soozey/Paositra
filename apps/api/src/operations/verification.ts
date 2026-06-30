@@ -123,17 +123,57 @@ export class VerificationController {
   @RequirePermission("operations:verification:read")
   async xlsx(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     const rows = await this.ds.query(
-      `SELECT a.name AS agency, v.period_date AS d, v.expected_balance AS expected, v.counted_balance AS counted,
-              v.ecart, v.status FROM operations.verifications v JOIN operations.agencies a ON a.id=v.agency_id ORDER BY v.created_at DESC`);
-    const buf = await buildXlsx("Verifications", [
-      { header: "Agence", key: "agency", width: 24 }, { header: "Période", key: "d", width: 13 },
-      { header: "Attendu", key: "expected", width: 16 }, { header: "Constaté", key: "counted", width: 16 },
-      { header: "Écart", key: "ecart", width: 14 }, { header: "Statut", key: "status", width: 12 }
-    ], rows, "[DÉMONSTRATION] Grille de vérification — NON CONTRACTUEL");
+      `SELECT a.name AS agency, v.period_date AS date_periode, v.expected_balance AS solde_attendu,
+              v.counted_balance AS solde_constate, v.ecart,
+              CASE v.status WHEN 'conforme' THEN 'Conforme' WHEN 'deficit' THEN 'Déficit' WHEN 'excedent' THEN 'Excédent' ELSE v.status END AS type_ecart,
+              v.justification AS note_justification, u.display_name AS verificateur, v.status AS statut_code,
+              v.created_at::date AS date_verification
+       FROM operations.verifications v
+       JOIN operations.agencies a ON a.id=v.agency_id
+       JOIN platform.users u ON u.id=v.verifier_user_id
+       ORDER BY v.created_at DESC`);
+    const dateToday = new Date().toISOString().slice(0, 10);
+    const buf = await buildXlsx("Vérifications caisses", [
+      { header: "Agence", key: "agency", width: 28 },
+      { header: "Période", key: "date_periode", width: 14 },
+      { header: "Date vérification", key: "date_verification", width: 18 },
+      { header: "Solde attendu (MGA)", key: "solde_attendu", width: 20 },
+      { header: "Solde constaté (MGA)", key: "solde_constate", width: 20 },
+      { header: "Écart (MGA)", key: "ecart", width: 16 },
+      { header: "Type d'écart", key: "type_ecart", width: 14 },
+      { header: "Note de justification", key: "note_justification", width: 40 },
+      { header: "Vérificateur", key: "verificateur", width: 24 }
+    ], rows, "Grille de vérification des caisses — PAOSITRA");
     await this.audit.record(this.ds.manager, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
       action: "operations.verification.export.xlsx", objectType: "operations.verification", metadata: { count: rows.length }, ...requestMetadata(req) });
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", 'attachment; filename="verifications-DEMO.xlsx"');
+    res.setHeader("Content-Disposition", `attachment; filename="Verification_Caisses_${dateToday}.xlsx"`);
+    res.end(buf);
+  }
+
+  @Get("verifications.pdf")
+  @RequirePermission("operations:verification:read")
+  async pdf(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const rows = await this.ds.query(
+      `SELECT a.name AS agency, v.period_date AS d, v.expected_balance AS expected,
+              v.counted_balance AS counted, v.ecart,
+              CASE v.status WHEN 'conforme' THEN 'Conforme' WHEN 'deficit' THEN 'Déficit' WHEN 'excedent' THEN 'Excédent' ELSE v.status END AS type_ecart,
+              v.justification AS note, u.display_name AS verif
+       FROM operations.verifications v
+       JOIN operations.agencies a ON a.id=v.agency_id
+       JOIN platform.users u ON u.id=v.verifier_user_id
+       ORDER BY v.created_at DESC`);
+    const lines = rows.map((r: { agency: string; d: string; expected: string; counted: string; ecart: string; type_ecart: string; note: string | null; verif: string }) => [
+      r.agency, r.d, Number(r.expected).toLocaleString("fr-FR"), Number(r.counted).toLocaleString("fr-FR"),
+      Number(r.ecart).toLocaleString("fr-FR"), r.type_ecart, r.note ?? "—", r.verif
+    ]);
+    const dateToday = new Date().toISOString().slice(0, 10);
+    const buf = await buildPdf("Vérification des caisses", `PAOSITRA — Exporté le ${dateToday}`,
+      lines, ["Agence", "Période", "Attendu", "Constaté", "Écart", "Type", "Note", "Vérificateur"]);
+    await this.audit.record(this.ds.manager, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
+      action: "operations.verification.export.pdf", objectType: "operations.verification", metadata: { count: rows.length }, ...requestMetadata(req) });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Verification_Caisses_${dateToday}.pdf"`);
     res.end(buf);
   }
 

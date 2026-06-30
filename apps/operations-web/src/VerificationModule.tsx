@@ -117,7 +117,16 @@ export function VerificationModule() {
       <section className="panel">
         <div className="panel-head">
           <h2>Vérifications</h2>
-          <button className="secondary" type="button" onClick={() => void downloadFile(auth.token, "/api/v1/operations/verifications.xlsx", "verifications-DEMO.xlsx").then((e) => e && setMsg({ type: "error", text: e }))}>Export Excel</button>
+          <div className="actions">
+            <button className="secondary" type="button" onClick={() => {
+              const d = new Date().toISOString().slice(0,10);
+              void downloadFile(auth.token, "/api/v1/operations/verifications.xlsx", `Verification_Caisses_${d}.xlsx`).then((e) => e && setMsg({ type: "error", text: e }));
+            }}>Export Excel</button>
+            <button className="secondary" type="button" onClick={() => {
+              const d = new Date().toISOString().slice(0,10);
+              void downloadFile(auth.token, "/api/v1/operations/verifications.pdf", `Verification_Caisses_${d}.pdf`).then((e) => e && setMsg({ type: "error", text: e }));
+            }}>Export PDF</button>
+          </div>
         </div>
         {verifs.length === 0 ? <p className="empty">Aucune vérification enregistrée.</p> : (
           <div className="table-wrap"><table>
