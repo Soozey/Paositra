@@ -86,6 +86,9 @@ export function CashModule() {
   const [closing, setClosing] = useState<string | null>(null);
   const [closeNote, setCloseNote] = useState("");
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [opFilter, setOpFilter] = useState({ type: "", direction: "", status: "" });
+  const [opPage, setOpPage] = useState(1);
+  const OP_PAGE_SIZE = 20;
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -134,6 +137,8 @@ export function CashModule() {
 
   async function loadOps(id: string) {
     setActiveSessionId(id);
+    setOpPage(1);
+    setOpFilter({ type: "", direction: "", status: "" });
     try {
       const r = await apiRequest<CashOp[]>(`/api/v1/operations/cash/sessions/${id}/operations`, { token: auth.token });
       setOps((prev) => ({ ...prev, [id]: r }));
@@ -304,25 +309,65 @@ export function CashModule() {
             <p className="empty">Chargement des opérations...</p>
           ) : activeOps.length === 0 ? (
             <p className="empty">Aucune opération.</p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Code</th><th>Type</th><th>Sens</th><th>Montant</th><th>Mode</th><th>État</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {activeOps.map((o) => (
-                    <tr key={o.id}>
-                      <td>{o.code}</td><td>{o.opType}</td><td>{o.direction}</td><td>{fmt(o.amount)}</td><td>{o.paymentMode}</td>
-                      <td>{o.status === "active" ? "Active" : "Annulée"}</td>
-                      <td>
-                        <button className="link" onClick={() => void downloadFile(auth.token, `/api/v1/operations/cash/operations/${o.id}/ticket.pdf`, `ticket-${o.code}.pdf`).then((e) => e && setMsg({ type: "error", text: e }))}>Ticket</button>
-                        {activeSession.status === "ouverte" && o.status === "active" && canOperate && <button className="link danger" onClick={() => void cancelOp(o.id, activeSession.id)}>Annuler</button>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          ) : (() => {
+            const filtered = activeOps.filter((o) => {
+              if (opFilter.type && !o.opType.toLowerCase().includes(opFilter.type.toLowerCase())) return false;
+              if (opFilter.direction && o.direction !== opFilter.direction) return false;
+              if (opFilter.status && o.status !== opFilter.status) return false;
+              return true;
+            });
+            const totalPages = Math.ceil(filtered.length / OP_PAGE_SIZE) || 1;
+            const page = Math.min(opPage, totalPages);
+            const paged = filtered.slice((page - 1) * OP_PAGE_SIZE, page * OP_PAGE_SIZE);
+            return (
+              <>
+                <div className="filter-bar">
+                  <label>Type
+                    <input value={opFilter.type} onChange={(e) => { setOpFilter({ ...opFilter, type: e.target.value }); setOpPage(1); }} placeholder="Filtrer par type" />
+                  </label>
+                  <label>Sens
+                    <select value={opFilter.direction} onChange={(e) => { setOpFilter({ ...opFilter, direction: e.target.value }); setOpPage(1); }}>
+                      <option value="">Tous</option>
+                      <option value="encaissement">Encaissement</option>
+                      <option value="decaissement">Décaissement</option>
+                    </select>
+                  </label>
+                  <label>État
+                    <select value={opFilter.status} onChange={(e) => { setOpFilter({ ...opFilter, status: e.target.value }); setOpPage(1); }}>
+                      <option value="">Tous</option>
+                      <option value="active">Active</option>
+                      <option value="annulee">Annulée</option>
+                    </select>
+                  </label>
+                  <span className="muted">{filtered.length} opération{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>Code</th><th>Type</th><th>Sens</th><th>Montant</th><th>Mode</th><th>État</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {paged.map((o) => (
+                        <tr key={o.id}>
+                          <td>{o.code}</td><td>{o.opType}</td><td>{o.direction}</td><td>{fmt(o.amount)}</td><td>{o.paymentMode}</td>
+                          <td>{o.status === "active" ? "Active" : "Annulée"}</td>
+                          <td>
+                            <button type="button" className="link" onClick={() => void downloadFile(auth.token, `/api/v1/operations/cash/operations/${o.id}/ticket.pdf`, `ticket-${o.code}.pdf`).then((e) => e && setMsg({ type: "error", text: e }))}>Ticket</button>
+                            {activeSession.status === "ouverte" && o.status === "active" && canOperate && <button type="button" className="link danger" onClick={() => void cancelOp(o.id, activeSession.id)}>Annuler</button>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {totalPages > 1 && (
+                  <div className="pagination">
+                    <button type="button" className="secondary" disabled={page <= 1} onClick={() => setOpPage(page - 1)}>← Précédent</button>
+                    <span>Page {page} / {totalPages}</span>
+                    <button type="button" className="secondary" disabled={page >= totalPages} onClick={() => setOpPage(page + 1)}>Suivant →</button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {activeSession.status === "ouverte" && canOperate && (
             <form onSubmit={(e) => addOp(e, activeSession.id)} className="form-grid operation-form">
