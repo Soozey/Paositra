@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from "react";
 import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { DENOMS, billetageTotal, downloadFile, fmt } from "./util";
 
@@ -16,6 +16,30 @@ interface CashOp {
 const STATUS_LABEL: Record<string, string> = {
   ouverte: "Ouverte", fermee: "Clôturée", validee: "Validée", refusee: "Refusée"
 };
+
+function formatCin(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 12);
+  return digits.replace(/(\d{3})(?=\d)/g, "$1 ").trim();
+}
+
+function CinInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 12);
+    onChange(digits);
+  }
+  const isValid = value === "" || value.length === 12;
+  return (
+    <input
+      inputMode="numeric"
+      placeholder="000 000 000 000"
+      value={formatCin(value)}
+      onChange={handleChange}
+      maxLength={14}
+      className={!isValid ? "input-error" : ""}
+      title="12 chiffres — numéro CIN"
+    />
+  );
+}
 
 function countValue(value: Record<string, number>, denom: number) {
   const raw = value[String(denom)];
@@ -314,8 +338,8 @@ export function CashModule() {
                   <option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="credit">Crédit</option>
                 </select>
               </label>
-              <label>N° CIN (optionnel)
-                <input value={opForm.clientIdNumber} onChange={(e) => setOpForm({ ...opForm, clientIdNumber: e.target.value, clientIdType: e.target.value ? "CIN" : "" })} />
+              <label>N° CIN (optionnel — 12 chiffres)
+                <CinInput value={opForm.clientIdNumber} onChange={(v) => setOpForm({ ...opForm, clientIdNumber: v, clientIdType: v ? "CIN" : "" })} />
               </label>
               <button className="primary" disabled={loading} type="submit">Enregistrer l'opération</button>
             </form>
