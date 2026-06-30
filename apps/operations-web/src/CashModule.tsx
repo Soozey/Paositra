@@ -17,6 +17,40 @@ const STATUS_LABEL: Record<string, string> = {
   ouverte: "Ouverte", fermee: "Clôturée", validee: "Validée", refusee: "Refusée"
 };
 
+function countValue(value: Record<string, number>, denom: number) {
+  const raw = value[String(denom)];
+  return raw == null || Number.isNaN(raw) ? "" : String(raw);
+}
+
+function updateCount(value: Record<string, number>, denom: number, raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  const next = { ...value };
+  if (!digits) {
+    delete next[String(denom)];
+    return next;
+  }
+  next[String(denom)] = Number(digits);
+  return next;
+}
+
+function BilletageInputs({ value, onChange }: { value: Record<string, number>; onChange: (v: Record<string, number>) => void }) {
+  return (
+    <div className="billetage">
+      {DENOMS.map((d) => (
+        <label key={d} className="billetage-item">{fmt(d)}
+          <input
+            inputMode="numeric"
+            pattern="[0-9 ]*"
+            value={countValue(value, d)}
+            onChange={(e) => onChange(updateCount(value, d, e.target.value))}
+          />
+        </label>
+      ))}
+      <strong>Total : {fmt(billetageTotal(value))} MGA</strong>
+    </div>
+  );
+}
+
 export function CashModule() {
   const auth = useAuth();
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -131,19 +165,6 @@ export function CashModule() {
       setMsg({ type: "success", text: decision === "valider" ? "Journée validée et verrouillée." : "Journée refusée." });
       await load();
     } catch (e) { setMsg({ type: "error", text: e instanceof Error ? e.message : "Erreur." }); }
-  }
-
-  function BilletageInputs({ value, onChange }: { value: Record<string, number>; onChange: (v: Record<string, number>) => void }) {
-    return (
-      <div className="billetage">
-        {DENOMS.map((d) => (
-          <label key={d} className="billetage-item">{fmt(d)}
-            <input type="number" min="0" value={value[String(d)] ?? ""} onChange={(e) => onChange({ ...value, [String(d)]: Number(e.target.value) })} />
-          </label>
-        ))}
-        <strong>Total : {fmt(billetageTotal(value))} MGA</strong>
-      </div>
-    );
   }
 
   const activeSession = activeSessionId ? sessions.find((s) => s.id === activeSessionId) ?? null : null;
