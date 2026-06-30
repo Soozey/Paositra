@@ -6,7 +6,7 @@ interface Agency { id: string; code: string; name: string }
 interface Session {
   id: string; registerLabel: string; businessDate: string; status: string;
   openingAmount: string; declaredAmount: string | null; countedAmount: string | null;
-  ecart: string | null; version: number; agencyName: string; agencyCode: string;
+  ecart: string | null; cashierNote: string | null; version: number; agencyName: string; agencyCode: string;
 }
 interface CashOp {
   id: string; code: string; opType: string; direction: string; amount: string;
@@ -84,6 +84,7 @@ export function CashModule() {
   const [closeBill, setCloseBill] = useState<Record<string, number>>({});
   const [opForm, setOpForm] = useState({ opType: "Mandat national", direction: "encaissement", amount: "", paymentMode: "especes", clientIdType: "", clientIdNumber: "" });
   const [closing, setClosing] = useState<string | null>(null);
+  const [closeNote, setCloseNote] = useState("");
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -186,11 +187,13 @@ export function CashModule() {
     e.preventDefault();
     setLoading(true);
     try {
+      const body: Record<string, unknown> = { billetage: closeBill, version: s.version };
+      if (closeNote.trim()) body.note = closeNote.trim();
       const r = await apiRequest<{ expected: number; counted: number; ecart: number }>(`/api/v1/operations/cash/sessions/${s.id}/close`, {
-        method: "POST", token: auth.token, idempotent: true, body: JSON.stringify({ billetage: closeBill, version: s.version })
+        method: "POST", token: auth.token, idempotent: true, body: JSON.stringify(body)
       });
       setMsg({ type: "success", text: `Caisse clôturée. Attendu ${fmt(r.expected)} / compté ${fmt(r.counted)} / écart ${fmt(r.ecart)} MGA.` });
-      setClosing(null); setCloseBill({});
+      setClosing(null); setCloseBill({}); setCloseNote("");
       await load();
     } catch (err) { setMsg({ type: "error", text: err instanceof Error ? err.message : "Clôture impossible." }); }
     finally { setLoading(false); }
@@ -250,7 +253,7 @@ export function CashModule() {
         {sessions.length === 0 ? <p className="empty">Aucune caisse ouverte. {canOpen ? "Ouvrez-en une ci-contre." : ""}</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Agence</th><th>Caisse</th><th>Date</th><th>Fond</th><th>Écart</th><th>État</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Agence</th><th>Caisse</th><th>Date</th><th>Fond</th><th>Écart</th><th>Note caissier</th><th>État</th><th>Actions</th></tr></thead>
               <tbody>
                 {sessions.map((s) => (
                   <tr key={s.id}>
@@ -259,6 +262,7 @@ export function CashModule() {
                     <td>{s.businessDate}</td>
                     <td>{fmt(s.openingAmount)}</td>
                     <td>{s.ecart != null ? <strong className={Number(s.ecart) !== 0 ? "badge-due" : ""}>{fmt(s.ecart)}</strong> : "—"}</td>
+                    <td>{s.cashierNote ? <span title={s.cashierNote}>📝 {s.cashierNote.slice(0, 40)}{s.cashierNote.length > 40 ? "…" : ""}</span> : "—"}</td>
                     <td>{STATUS_LABEL[s.status] ?? s.status}</td>
                     <td>
                       <div className="actions">
@@ -349,6 +353,15 @@ export function CashModule() {
             <form onSubmit={(e) => closeSession(e, activeSession)} className="closing-form">
               <h3>Billetage de fin de journée</h3>
               <BilletageInputs value={closeBill} onChange={setCloseBill} />
+              <label>Note de justification (optionnelle — visible par le vérificateur)
+                <textarea
+                  value={closeNote}
+                  onChange={(e) => setCloseNote(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder="Si un écart est constaté, vous pouvez l'expliquer ici."
+                />
+              </label>
               <button className="primary" disabled={loading} type="submit">Confirmer la clôture</button>
             </form>
           )}

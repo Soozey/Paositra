@@ -5,6 +5,7 @@ import { downloadFile, fmt } from "./util";
 interface Agency { id: string; name: string }
 interface Verif { id: string; periodDate: string; expectedBalance: string; countedBalance: string; ecart: string; status: string; justification: string | null; agencyName: string }
 interface Fund { id: string; reference: string; amount: string; status: string; version: number; comment: string | null; fromAgency: string; toAgency: string }
+interface CashEcart { id: string; registerLabel: string; businessDate: string; status: string; openingAmount: string; countedAmount: string | null; ecart: string; cashierNote: string | null; closedAt: string | null; agencyName: string; agencyCode: string; cashierName: string }
 
 const VSTATUS: Record<string, string> = { conforme: "Conforme", deficit: "Déficit", excedent: "Excédent" };
 const FSTATUS: Record<string, string> = { demande: "Demande", solde_verifie: "Solde vérifié", autorise: "Autorisé", confirme: "Confirmé", rejete: "Rejeté" };
@@ -14,6 +15,7 @@ export function VerificationModule() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [verifs, setVerifs] = useState<Verif[]>([]);
   const [funds, setFunds] = useState<Fund[]>([]);
+  const [cashEcarts, setCashEcarts] = useState<CashEcart[]>([]);
   const [vForm, setVForm] = useState({ agencyId: "", periodDate: new Date().toISOString().slice(0, 10), expectedBalance: "", countedBalance: "", justification: "" });
   const [fForm, setFForm] = useState({ fromAgencyId: "", toAgencyId: "", amount: "" });
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
@@ -25,10 +27,11 @@ export function VerificationModule() {
     try {
       const calls: Promise<unknown>[] = [
         apiRequest<{ items: Agency[] }>("/api/v1/operations/agencies?page=1&pageSize=100", { token: auth.token }),
-        apiRequest<{ items: Verif[] }>("/api/v1/operations/verifications", { token: auth.token })
+        apiRequest<{ items: Verif[] }>("/api/v1/operations/verifications", { token: auth.token }),
+        apiRequest<{ items: CashEcart[] }>("/api/v1/operations/cash/sessions/ecarts", { token: auth.token })
       ];
-      const [ag, vs] = await Promise.all(calls) as [{ items: Agency[] }, { items: Verif[] }];
-      setAgencies(ag.items); setVerifs(vs.items);
+      const [ag, vs, ce] = await Promise.all(calls) as [{ items: Agency[] }, { items: Verif[] }, { items: CashEcart[] }];
+      setAgencies(ag.items); setVerifs(vs.items); setCashEcarts(ce.items);
       if (canFund) {
         const f = await apiRequest<{ items: Fund[] }>("/api/v1/operations/fund-provisions", { token: auth.token });
         setFunds(f.items);
@@ -132,6 +135,31 @@ export function VerificationModule() {
           </table></div>
         )}
       </section>
+      <section className="panel">
+        <h2>Caisses clôturées avec écart</h2>
+        <p className="muted">Écarts constatés lors de la clôture, avec la note de justification saisie par le caissier.</p>
+        {cashEcarts.length === 0 ? <p className="empty">Aucune caisse avec écart.</p> : (
+          <div className="table-wrap"><table>
+            <thead><tr><th>Agence</th><th>Caisse</th><th>Caissier</th><th>Date</th><th>Fond initial</th><th>Compté</th><th>Écart</th><th>Note caissier</th><th>État</th></tr></thead>
+            <tbody>
+              {cashEcarts.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.agencyName}</td>
+                  <td>{c.registerLabel}</td>
+                  <td>{c.cashierName}</td>
+                  <td>{c.businessDate}</td>
+                  <td>{fmt(c.openingAmount)}</td>
+                  <td>{c.countedAmount != null ? fmt(c.countedAmount) : "—"}</td>
+                  <td><strong className={Number(c.ecart) !== 0 ? "badge-due" : ""}>{fmt(c.ecart)}</strong></td>
+                  <td>{c.cashierNote ?? <span className="muted">—</span>}</td>
+                  <td>{c.status === "fermee" ? "Clôturée" : c.status === "validee" ? "Validée" : c.status === "refusee" ? "Refusée" : c.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        )}
+      </section>
+
       {canFund && (
         <section className="panel">
           <h2>Mise à disposition de fonds (double validation)</h2>

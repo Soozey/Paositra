@@ -60,7 +60,7 @@ export class AddOperationDto {
   @IsOptional() @IsString() @MaxLength(80) reference?: string;
 }
 export class CancelOpDto { @IsString() @MinLength(3) @MaxLength(1000) reason!: string; }
-export class CloseSessionDto { @IsObject() billetage!: Record<string, number>; @Type(()=>Number) @IsInt() @Min(1) version!: number; }
+export class CloseSessionDto { @IsObject() billetage!: Record<string, number>; @Type(()=>Number) @IsInt() @Min(1) version!: number; @IsOptional() @IsString() @MaxLength(1000) note?: string; }
 export class ValidateDayDto { @IsIn(["valider","refuser"]) decision!: string; @IsOptional() @IsString() @MaxLength(1000) comment?: string; @Type(()=>Number) @IsInt() @Min(1) version!: number; }
 
 @ApiTags("Opérations — Caisses")
@@ -78,7 +78,8 @@ export class CashController {
     return { items: await this.ds.query(
       `SELECT s.id, s.register_label AS "registerLabel", s.business_date AS "businessDate", s.status,
               s.opening_amount AS "openingAmount", s.declared_amount AS "declaredAmount",
-              s.counted_amount AS "countedAmount", s.ecart, s.version, a.name AS "agencyName", a.code AS "agencyCode"
+              s.counted_amount AS "countedAmount", s.ecart, s.cashier_note AS "cashierNote", s.version,
+              a.name AS "agencyName", a.code AS "agencyCode"
        FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id ${where} ORDER BY s.opened_at DESC`,
       params) };
   }
@@ -179,8 +180,8 @@ export class CashController {
       const ecart = counted - expected;
       await m.query(
         `UPDATE operations.cash_sessions SET status='fermee', closing_billetage=$1, declared_amount=$2,
-         counted_amount=$3, ecart=$4, closed_at=now(), version=version+1 WHERE id=$5`,
-        [JSON.stringify(dto.billetage), expected, counted, ecart, id]);
+         counted_amount=$3, ecart=$4, cashier_note=$5, closed_at=now(), version=version+1 WHERE id=$6`,
+        [JSON.stringify(dto.billetage), expected, counted, ecart, dto.note?.trim() ?? null, id]);
       await this.audit.record(m, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
         action: "operations.cash.closed", objectType: "operations.cash_session", objectId: id,
         afterState: { expected, counted, ecart }, ...requestMetadata(req) });
@@ -206,6 +207,22 @@ export class CashController {
         beforeState: { status: "fermee" }, afterState: { status: target }, metadata: dto.comment ? { comment: dto.comment } : {}, ...requestMetadata(req) });
       return { id, status: target };
     });
+  }
+
+  @Get("cash/sessions/ecarts")
+  @RequirePermission("operations:verification:read")
+  async sessionsWithEcart() {
+    return { items: await this.ds.query(
+      `SELECT s.id, s.register_label AS "registerLabel", s.business_date AS "businessDate", s.status,
+              s.opening_amount AS "openingAmount", s.counted_amount AS "countedAmount",
+              s.ecart, s.cashier_note AS "cashierNote", s.closed_at AS "closedAt",
+              a.name AS "agencyName", a.code AS "agencyCode",
+              u.display_name AS "cashierName"
+       FROM operations.cash_sessions s
+       JOIN operations.agencies a ON a.id = s.agency_id
+       JOIN platform.users u ON u.id = s.cashier_user_id
+       WHERE s.ecart IS NOT NULL AND s.ecart <> 0
+       ORDER BY s.closed_at DESC NULLS LAST LIMIT 200`) };
   }
 
   @Get("cash/operations/:opId/ticket.pdf")
