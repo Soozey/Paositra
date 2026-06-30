@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { apiRequest, Message, useAuth } from "@paositra/web-core";
+import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { downloadFile, fmt } from "./util";
 
 interface Account { id: string; label: string; bank: string; accountNumber: string; currency: string; openingBalance: string; status: string; version: number; balance: string }
@@ -75,7 +75,7 @@ export function CurrentAccountsModule() {
             <input placeholder="Libellé" required value={accForm.label} onChange={(e) => setAccForm({ ...accForm, label: e.target.value })} />
             <input placeholder="Banque" required value={accForm.bank} onChange={(e) => setAccForm({ ...accForm, bank: e.target.value })} />
             <input placeholder="N° compte" required value={accForm.accountNumber} onChange={(e) => setAccForm({ ...accForm, accountNumber: e.target.value })} />
-            <input placeholder="Solde initial" inputMode="decimal" value={accForm.openingBalance} onChange={(e) => setAccForm({ ...accForm, openingBalance: e.target.value })} />
+            <AmountInput placeholder="Solde initial" value={accForm.openingBalance} onValueChange={(value) => setAccForm({ ...accForm, openingBalance: value })} />
             <button className="primary" disabled={loading} type="submit">Créer</button>
           </form>
         </section>
@@ -110,7 +110,7 @@ export function CurrentAccountsModule() {
                             <form onSubmit={(e) => addEntry(e, a.id)} className="inline-form">
                               <input type="date" required value={entryForm.entryDate} onChange={(e) => setEntryForm({ ...entryForm, entryDate: e.target.value })} />
                               <select value={entryForm.direction} onChange={(e) => setEntryForm({ ...entryForm, direction: e.target.value })}><option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option></select>
-                              <input placeholder="Montant" inputMode="decimal" required value={entryForm.amount} onChange={(e) => setEntryForm({ ...entryForm, amount: e.target.value })} />
+                              <AmountInput placeholder="Montant" required value={entryForm.amount} onValueChange={(value) => setEntryForm({ ...entryForm, amount: value })} />
                               <input placeholder="Libellé" required value={entryForm.label} onChange={(e) => setEntryForm({ ...entryForm, label: e.target.value })} />
                               <button className="primary" disabled={loading} type="submit">Ajouter écriture</button>
                             </form>
@@ -135,7 +135,7 @@ export function CurrentAccountsModule() {
             <select required value={chForm.accountId} onChange={(e) => setChForm({ ...chForm, accountId: e.target.value })}><option value="">Compte</option>{accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select>
             <input placeholder="N° chèque" required value={chForm.chequeNumber} onChange={(e) => setChForm({ ...chForm, chequeNumber: e.target.value })} />
             <input placeholder="Bénéficiaire" required value={chForm.beneficiary} onChange={(e) => setChForm({ ...chForm, beneficiary: e.target.value })} />
-            <input placeholder="Montant" inputMode="decimal" required value={chForm.amount} onChange={(e) => setChForm({ ...chForm, amount: e.target.value })} />
+            <AmountInput placeholder="Montant" required value={chForm.amount} onValueChange={(value) => setChForm({ ...chForm, amount: value })} />
             <button className="primary" disabled={loading} type="submit">Émettre</button>
           </form>
         )}

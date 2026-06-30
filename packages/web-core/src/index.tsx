@@ -1,6 +1,7 @@
 import {
   createContext,
   type FormEvent,
+  type InputHTMLAttributes,
   type PropsWithChildren,
   useContext,
   useEffect,
@@ -32,6 +33,52 @@ interface AuthState {
     permission: string,
     scope?: { type: Exclude<string, "global">; id: string }
   ) => boolean;
+}
+
+type AmountInputProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type" | "inputMode" | "value" | "onChange"
+> & {
+  value: string;
+  onValueChange: (value: string) => void;
+};
+
+export function sanitizeAmountInput(value: string) {
+  const compact = value.replace(/\s/g, "").replace(",", ".");
+  const firstDot = compact.indexOf(".");
+  const normalized =
+    firstDot === -1
+      ? compact
+      : compact.slice(0, firstDot + 1) + compact.slice(firstDot + 1).replace(/\./g, "");
+  return normalized.replace(/[^\d.]/g, "");
+}
+
+export function formatAmountInput(value: string) {
+  const cleaned = sanitizeAmountInput(value);
+  if (!cleaned) return "";
+  const [integerPart = "", decimalPart] = cleaned.split(".");
+  const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return cleaned.includes(".")
+    ? `${grouped}.${decimalPart ?? ""}`
+    : grouped;
+}
+
+export function AmountInput({
+  value,
+  onValueChange,
+  ...props
+}: AmountInputProps) {
+  return (
+    <input
+      {...props}
+      inputMode="decimal"
+      type="text"
+      value={formatAmountInput(value)}
+      onChange={(event) => {
+        onValueChange(sanitizeAmountInput(event.target.value));
+      }}
+    />
+  );
 }
 
 const AuthContext = createContext<AuthState | null>(null);

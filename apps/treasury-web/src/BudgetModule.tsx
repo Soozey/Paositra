@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { apiRequest, Message, useAuth } from "@paositra/web-core";
+import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { downloadFile, fmt } from "./util";
 
 interface Exercise { id: string; year: number; label: string; status: string }
@@ -111,7 +111,7 @@ export function BudgetModule() {
             <input placeholder="Programme" required value={lineForm.program} onChange={(e) => setLineForm({ ...lineForm, program: e.target.value })} />
             <input placeholder="Compte" required value={lineForm.accountCode} onChange={(e) => setLineForm({ ...lineForm, accountCode: e.target.value })} />
             <input placeholder="Libellé" required value={lineForm.label} onChange={(e) => setLineForm({ ...lineForm, label: e.target.value })} />
-            <input placeholder="Montant ouvert" inputMode="decimal" required value={lineForm.allocatedAmount} onChange={(e) => setLineForm({ ...lineForm, allocatedAmount: e.target.value })} />
+            <AmountInput placeholder="Montant ouvert" required value={lineForm.allocatedAmount} onValueChange={(value) => setLineForm({ ...lineForm, allocatedAmount: value })} />
             <button className="primary" disabled={loading} type="submit">Ajouter ligne</button>
           </form>
         )}
@@ -123,7 +123,7 @@ export function BudgetModule() {
             <select required value={engForm.lineId} onChange={(e) => setEngForm({ ...engForm, lineId: e.target.value })}><option value="">Ligne de crédit</option>{lines.map((l) => <option key={l.id} value={l.id}>{l.label} (dispo {fmt(l.available)})</option>)}</select>
             <input placeholder="Objet" required value={engForm.object} onChange={(e) => setEngForm({ ...engForm, object: e.target.value })} />
             <input placeholder="Type de marché" required value={engForm.marketType} onChange={(e) => setEngForm({ ...engForm, marketType: e.target.value })} />
-            <input placeholder="Montant" inputMode="decimal" required value={engForm.amount} onChange={(e) => setEngForm({ ...engForm, amount: e.target.value })} />
+            <AmountInput placeholder="Montant" required value={engForm.amount} onValueChange={(value) => setEngForm({ ...engForm, amount: value })} />
             <button className="primary" disabled={loading} type="submit">Créer le dossier</button>
           </form>
         )}

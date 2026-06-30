@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { apiRequest, Message, useAuth } from "@paositra/web-core";
+import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { downloadFile, fmt } from "./util";
 
 interface Agency { id: string; name: string }
@@ -104,8 +104,8 @@ export function VerificationModule() {
               </select>
             </label>
             <label>Période<input type="date" required value={vForm.periodDate} onChange={(e) => setVForm({ ...vForm, periodDate: e.target.value })} /></label>
-            <label>Solde attendu<input inputMode="decimal" required value={vForm.expectedBalance} onChange={(e) => setVForm({ ...vForm, expectedBalance: e.target.value })} /></label>
-            <label>Solde constaté<input inputMode="decimal" required value={vForm.countedBalance} onChange={(e) => setVForm({ ...vForm, countedBalance: e.target.value })} /></label>
+            <label>Solde attendu<AmountInput required value={vForm.expectedBalance} onValueChange={(value) => setVForm({ ...vForm, expectedBalance: value })} /></label>
+            <label>Solde constate<AmountInput required value={vForm.countedBalance} onValueChange={(value) => setVForm({ ...vForm, countedBalance: value })} /></label>
             <label>Justification (obligatoire si écart)<input maxLength={1000} value={vForm.justification} onChange={(e) => setVForm({ ...vForm, justification: e.target.value })} /></label>
             <button className="primary" disabled={loading} type="submit">Enregistrer la vérification</button>
           </form>
@@ -142,7 +142,7 @@ export function VerificationModule() {
             <select required value={fForm.toAgencyId} onChange={(e) => setFForm({ ...fForm, toAgencyId: e.target.value })}>
               <option value="">Agence destinataire</option>{agencies.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
-            <input placeholder="Montant" inputMode="decimal" required value={fForm.amount} onChange={(e) => setFForm({ ...fForm, amount: e.target.value })} />
+            <AmountInput placeholder="Montant" required value={fForm.amount} onValueChange={(value) => setFForm({ ...fForm, amount: value })} />
             <button className="primary" disabled={loading} type="submit">Créer la demande</button>
           </form>
           {funds.length === 0 ? <p className="empty">Aucune demande.</p> : (

@@ -1,5 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import {
+  AmountInput,
   ApiError,
   AppShell,
   ChangePasswordPage,
@@ -421,13 +422,13 @@ function AgenciesWorkspace() {
                 <input maxLength={240} value={form.parentOrgan} onChange={(e) => setForm({ ...form, parentOrgan: e.target.value })} />
               </label>
               <label>Maximum autorisé en numéraire
-                <input inputMode="decimal" value={form.cashMaxAmount} onChange={(e) => setForm({ ...form, cashMaxAmount: e.target.value })} />
+                <AmountInput value={form.cashMaxAmount} onValueChange={(value) => setForm({ ...form, cashMaxAmount: value })} />
               </label>
               <label>Maximum autorisé en valeurs postales
-                <input inputMode="decimal" value={form.postalValueMaxAmount} onChange={(e) => setForm({ ...form, postalValueMaxAmount: e.target.value })} />
+                <AmountInput value={form.postalValueMaxAmount} onValueChange={(value) => setForm({ ...form, postalValueMaxAmount: value })} />
               </label>
               <label>Maximum autorisé en monnaie étrangère
-                <input inputMode="decimal" value={form.foreignCurrencyMaxAmount} onChange={(e) => setForm({ ...form, foreignCurrencyMaxAmount: e.target.value })} />
+                <AmountInput value={form.foreignCurrencyMaxAmount} onValueChange={(value) => setForm({ ...form, foreignCurrencyMaxAmount: value })} />
               </label>
               <label>Date de début de gestion du chef d'agence
                 <input type="date" value={form.managerManagementStartDate} onChange={(e) => setForm({ ...form, managerManagementStartDate: e.target.value })} />

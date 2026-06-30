@@ -3,6 +3,7 @@ import { CurrentAccountsModule } from "./CurrentAccountsModule";
 import { BudgetModule } from "./BudgetModule";
 import { TreasuryDashboardModule } from "./TreasuryDashboardModule";
 import {
+  AmountInput,
   ApiError,
   AppShell,
   ChangePasswordPage,
@@ -521,7 +522,7 @@ function TreasuryWorkspace() {
                     </select>
                   </label>
                   <label>Montant principal
-                    <input inputMode="decimal" required value={placementForm.principalAmount} onChange={(e) => setPlacementForm({ ...placementForm, principalAmount: e.target.value })} />
+                    <AmountInput required value={placementForm.principalAmount} onValueChange={(value) => setPlacementForm({ ...placementForm, principalAmount: value })} />
                   </label>
                   <label>Devise (code ISO à trois lettres)
                     <input maxLength={3} required value={placementForm.currency} onChange={(e) => setPlacementForm({ ...placementForm, currency: e.target.value.toUpperCase() })} />
@@ -810,7 +811,7 @@ function TreasuryReceivables() {
           <h2>Nouvelle créance</h2>
           <form onSubmit={create}>
             <label>Débiteur<input required maxLength={240} value={form.debtorName} onChange={(e) => setForm({ ...form, debtorName: e.target.value })} /></label>
-            <label>Montant<input inputMode="decimal" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
+            <label>Montant<AmountInput required value={form.amount} onValueChange={(value) => setForm({ ...form, amount: value })} /></label>
             <label>Devise<input maxLength={3} required value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></label>
             <label>Date d'émission<input type="date" required value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} /></label>
             <label>Date d'échéance<input type="date" required value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></label>

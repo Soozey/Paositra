@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { apiRequest, Message, useAuth } from "@paositra/web-core";
+import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { DENOMS, billetageTotal, downloadFile, fmt } from "./util";
 
 interface Agency { id: string; code: string; name: string }
@@ -211,7 +211,7 @@ export function CashModule() {
                               <select value={opForm.direction} onChange={(e) => setOpForm({ ...opForm, direction: e.target.value })}>
                                 <option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option>
                               </select>
-                              <input placeholder="Montant" inputMode="decimal" required value={opForm.amount} onChange={(e) => setOpForm({ ...opForm, amount: e.target.value })} />
+                              <AmountInput placeholder="Montant" required value={opForm.amount} onValueChange={(value) => setOpForm({ ...opForm, amount: value })} />
                               <select value={opForm.paymentMode} onChange={(e) => setOpForm({ ...opForm, paymentMode: e.target.value })}>
                                 <option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="credit">Crédit</option>
                               </select>

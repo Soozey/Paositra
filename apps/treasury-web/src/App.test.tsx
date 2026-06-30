@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { AuthProvider } from "@paositra/web-core";
+import { AmountInput, AuthProvider, formatAmountInput, sanitizeAmountInput } from "@paositra/web-core";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -12,6 +12,34 @@ function renderApp() {
 }
 
 describe("Treasury application shell", () => {
+  it("formats amount input while keeping the raw numeric value", () => {
+    let raw = "";
+    const { rerender } = render(
+      <AmountInput
+        aria-label="Montant"
+        value={raw}
+        onValueChange={(value) => {
+          raw = value;
+        }}
+      />
+    );
+    const input = screen.getByLabelText("Montant");
+
+    fireEvent.change(input, { target: { value: "2" } });
+    rerender(<AmountInput aria-label="Montant" value={raw} onValueChange={(value) => { raw = value; }} />);
+    fireEvent.change(input, { target: { value: "20" } });
+    rerender(<AmountInput aria-label="Montant" value={raw} onValueChange={(value) => { raw = value; }} />);
+    fireEvent.change(input, { target: { value: "200" } });
+    rerender(<AmountInput aria-label="Montant" value={raw} onValueChange={(value) => { raw = value; }} />);
+    fireEvent.change(input, { target: { value: "2000" } });
+    rerender(<AmountInput aria-label="Montant" value={raw} onValueChange={(value) => { raw = value; }} />);
+
+    expect(raw).toBe("2000");
+    expect(input).toHaveValue("2 000");
+    expect(formatAmountInput("1234567.5")).toBe("1 234 567.5");
+    expect(sanitizeAmountInput("1 234 567,5")).toBe("1234567.5");
+  });
+
   it("renders the labelled login form with valid UTF-8 text", () => {
     renderApp();
 

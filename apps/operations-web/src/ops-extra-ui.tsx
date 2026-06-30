@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { apiRequest, Message, useAuth } from "@paositra/web-core";
+import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { downloadFile, fmt } from "./util";
 
 interface Agency { id: string; name: string }
@@ -87,7 +87,7 @@ export function ValueRequestsModule() {
             <select required value={form.fromAgencyId} onChange={(e) => setForm({ ...form, fromAgencyId: e.target.value })}><option value="">Agence source</option>{agencies.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
             <select required value={form.toAgencyId} onChange={(e) => setForm({ ...form, toAgencyId: e.target.value })}><option value="">Agence destinataire</option>{agencies.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
             <select value={form.valueType} onChange={(e) => setForm({ ...form, valueType: e.target.value })}><option value="G59">G59 (versement)</option><option value="G60">G60 (rapatriement)</option></select>
-            <input placeholder="Montant" inputMode="decimal" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            <AmountInput placeholder="Montant" required value={form.amount} onValueChange={(value) => setForm({ ...form, amount: value })} />
             <button className="primary" disabled={loading} type="submit">Créer la demande</button>
           </form>
         </section>
