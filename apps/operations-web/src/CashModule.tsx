@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 function countValue(value: Record<string, number>, denom: number) {
   const raw = value[String(denom)];
-  return raw == null || Number.isNaN(raw) ? "" : fmt(raw);
+  return raw == null || Number.isNaN(raw) ? "" : String(raw).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 function updateCount(value: Record<string, number>, denom: number, raw: string) {
@@ -40,7 +40,6 @@ function BilletageInputs({ value, onChange }: { value: Record<string, number>; o
         <label key={d} className="billetage-item">{fmt(d)}
           <input
             inputMode="numeric"
-            pattern="[0-9 ]*"
             value={countValue(value, d)}
             onChange={(e) => onChange(updateCount(value, d, e.target.value))}
           />
