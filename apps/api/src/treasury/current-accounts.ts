@@ -196,6 +196,42 @@ export class CurrentAccountsController {
     res.end(buf);
   }
 
+  @Get("account-journal.pdf")
+  @RequirePermission("treasury:accounts:read")
+  async journalPdf(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const rows = await this.ds.query(
+      `SELECT a.label AS account, e.entry_date AS d, e.direction, e.amount, e.piece_reference AS piece, e.label,
+              CASE WHEN e.reconciled THEN 'Oui' ELSE 'Non' END AS reconciled
+       FROM treasury.account_entries e JOIN treasury.current_accounts a ON a.id=e.account_id
+       ORDER BY e.entry_date DESC`
+    );
+    const lines = rows.map((row: Record<string, unknown>) => [
+      String(row.account ?? ""),
+      String(row.d ?? ""),
+      String(row.direction ?? ""),
+      Number(row.amount ?? 0).toLocaleString("fr-FR"),
+      String(row.piece ?? ""),
+      String(row.reconciled ?? "")
+    ]);
+    const buf = await buildPdf(
+      "Journal des comptes courants",
+      "[DÉMONSTRATION] PAOSITRA — données non contractuelles — format A4",
+      lines,
+      ["Compte", "Date", "Sens", "Montant", "Pièce", "Rapproché"]
+    );
+    await this.audit.record(this.ds.manager, {
+      actorUserId: req.user!.id,
+      sessionId: req.user!.sessionId,
+      action: "treasury.accounts.export.pdf",
+      objectType: "treasury.account_entry",
+      metadata: { count: rows.length },
+      ...requestMetadata(req)
+    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="journal-comptes-DEMO.pdf"');
+    res.end(buf);
+  }
+
   @Get("cheques-register.pdf")
   @RequirePermission("treasury:accounts:read")
   async chequesPdf(@Req() req: AuthenticatedRequest, @Res() res: Response) {
@@ -209,6 +245,36 @@ export class CurrentAccountsController {
       action: "treasury.cheques.export.pdf", objectType: "treasury.cheque", metadata: { count: rows.length }, ...requestMetadata(req) });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="registre-cheques-DEMO.pdf"');
+    res.end(buf);
+  }
+
+  @Get("cheques-register.xlsx")
+  @RequirePermission("treasury:accounts:read")
+  async chequesXlsx(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const rows = await this.ds.query(
+      `SELECT c.cheque_number AS number, c.beneficiary, c.amount, c.status,
+              c.issue_date AS "issueDate", a.label AS account
+       FROM treasury.cheques c JOIN treasury.current_accounts a ON a.id=c.account_id
+       ORDER BY c.created_at DESC`
+    );
+    const buf = await buildXlsx("Registre cheques", [
+      { header: "N° chèque", key: "number", width: 18 },
+      { header: "Bénéficiaire", key: "beneficiary", width: 30 },
+      { header: "Montant", key: "amount", width: 18 },
+      { header: "Compte", key: "account", width: 26 },
+      { header: "Date d'émission", key: "issueDate", width: 16 },
+      { header: "Statut", key: "status", width: 16 }
+    ], rows, "[DÉMONSTRATION] Registre des chèques — non contractuel");
+    await this.audit.record(this.ds.manager, {
+      actorUserId: req.user!.id,
+      sessionId: req.user!.sessionId,
+      action: "treasury.cheques.export.xlsx",
+      objectType: "treasury.cheque",
+      metadata: { count: rows.length },
+      ...requestMetadata(req)
+    });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="registre-cheques-DEMO.xlsx"');
     res.end(buf);
   }
 }

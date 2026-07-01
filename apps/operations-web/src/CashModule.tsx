@@ -7,6 +7,7 @@ interface Session {
   id: string; registerLabel: string; businessDate: string; status: string;
   openingAmount: string; declaredAmount: string | null; countedAmount: string | null;
   ecart: string | null; cashierNote: string | null; version: number; agencyName: string; agencyCode: string;
+  cashierName?: string | null;
 }
 interface CashOp {
   id: string; code: string; opType: string; direction: string; amount: string;
@@ -87,6 +88,8 @@ export function CashModule() {
   const [closeNote, setCloseNote] = useState("");
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [opFilter, setOpFilter] = useState({ type: "", direction: "", status: "" });
+  const [cashFilter, setCashFilter] = useState({ search: "", status: "" });
+  const [cashSort, setCashSort] = useState<"date_desc" | "date_asc" | "agency_asc" | "status_asc">("date_desc");
   const [opPage, setOpPage] = useState(1);
   const OP_PAGE_SIZE = 20;
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
@@ -219,6 +222,20 @@ export function CashModule() {
 
   const activeSession = activeSessionId ? sessions.find((s) => s.id === activeSessionId) ?? null : null;
   const activeOps = activeSession ? ops[activeSession.id] : undefined;
+  const visibleSessions = sessions
+    .filter((s) => {
+      const search = cashFilter.search.trim().toLowerCase();
+      if (cashFilter.status && s.status !== cashFilter.status) return false;
+      if (!search) return true;
+      return [s.agencyName, s.agencyCode, s.registerLabel, s.cashierName ?? ""]
+        .some((value) => value.toLowerCase().includes(search));
+    })
+    .sort((a, b) => {
+      if (cashSort === "date_asc") return a.businessDate.localeCompare(b.businessDate);
+      if (cashSort === "agency_asc") return a.agencyName.localeCompare(b.agencyName);
+      if (cashSort === "status_asc") return a.status.localeCompare(b.status);
+      return b.businessDate.localeCompare(a.businessDate);
+    });
 
   return (
     <div className="grid">
@@ -255,45 +272,79 @@ export function CashModule() {
       )}
       <section className="panel wide-panel">
         <h2>Caisses</h2>
-        {sessions.length === 0 ? <p className="empty">Aucune caisse ouverte. {canOpen ? "Ouvrez-en une ci-contre." : ""}</p> : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Agence</th><th>Caisse</th><th>Date</th><th>Fond</th><th>Écart</th><th>Note caissier</th><th>État</th><th>Actions</th></tr></thead>
-              <tbody>
-                {sessions.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.agencyName}</td>
-                    <td>{s.registerLabel}</td>
-                    <td>{s.businessDate}</td>
-                    <td>{fmt(s.openingAmount)}</td>
-                    <td>{s.ecart != null ? <strong className={Number(s.ecart) !== 0 ? "badge-due" : ""}>{fmt(s.ecart)}</strong> : "—"}</td>
-                    <td>{s.cashierNote ? <span title={s.cashierNote}>📝 {s.cashierNote.slice(0, 40)}{s.cashierNote.length > 40 ? "…" : ""}</span> : "—"}</td>
-                    <td>{STATUS_LABEL[s.status] ?? s.status}</td>
-                    <td>
-                      <div className="actions">
-                        <button className={activeSessionId === s.id ? "primary" : "secondary"} onClick={() => void loadOps(s.id)}>Opérations</button>
-                        {s.status === "ouverte" && canClose && (
-                          <button
-                            className="secondary"
-                            onClick={() => {
-                              setActiveSessionId(s.id);
-                              setClosing(closing === s.id ? null : s.id);
-                              if (!ops[s.id]) void loadOps(s.id);
-                            }}
-                          >
-                            Clôturer
-                          </button>
-                        )}
-                        {s.status === "fermee" && canValidate && <button className="secondary" onClick={() => void validateDay(s, "valider")}>Valider journée</button>}
-                        {s.status === "fermee" && canValidate && <button className="danger" onClick={() => void validateDay(s, "refuser")}>Refuser</button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="muted">Périmètre du compte connecté : {fixedAgencyId ? "agence rattachée au caissier" : "périmètre autorisé par les habilitations"}. Source : sessions de caisse enregistrées dans la démonstration.</p>
+        <div className="filter-bar">
+          <label>Recherche
+            <input value={cashFilter.search} onChange={(e) => setCashFilter({ ...cashFilter, search: e.target.value })} placeholder="Agence, caisse, caissier" />
+          </label>
+          <label>Statut
+            <select value={cashFilter.status} onChange={(e) => setCashFilter({ ...cashFilter, status: e.target.value })}>
+              <option value="">Tous</option>
+              <option value="ouverte">Ouverte</option>
+              <option value="fermee">Clôturée</option>
+              <option value="validee">Validée</option>
+              <option value="refusee">Refusée</option>
+            </select>
+          </label>
+          <label>Tri
+            <select value={cashSort} onChange={(e) => setCashSort(e.target.value as typeof cashSort)}>
+              <option value="date_desc">Date la plus récente</option>
+              <option value="date_asc">Date la plus ancienne</option>
+              <option value="agency_asc">Agence</option>
+              <option value="status_asc">Statut</option>
+            </select>
+          </label>
+          <button className="secondary" type="button" onClick={() => { setCashFilter({ search: "", status: "" }); setCashSort("date_desc"); }}>
+            Réinitialiser filtres
+          </button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Agence</th><th>Caisse</th><th>Caissier</th><th>Date journée</th><th>Statut</th><th>Solde ouverture</th><th>Total entrées</th><th>Total sorties</th><th>Solde théorique</th><th>Écart</th><th>Dernière opération</th><th>Action possible</th></tr></thead>
+            <tbody>
+              {visibleSessions.length === 0 ? (
+                <tr>
+                  <td colSpan={12} className="empty">
+                    Votre périmètre ne contient actuellement aucune opération de caisse. Le gabarit est prêt pour recevoir les données officielles ou les opérations de démonstration autorisées.
+                  </td>
+                </tr>
+              ) : visibleSessions.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.agencyName}</td>
+                  <td>{s.registerLabel}</td>
+                  <td>{s.cashierName ?? "Non renseigné"}</td>
+                  <td>{s.businessDate}</td>
+                  <td>{STATUS_LABEL[s.status] ?? s.status}</td>
+                  <td>{fmt(s.openingAmount)}</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>{s.declaredAmount != null ? fmt(s.declaredAmount) : "—"}</td>
+                  <td>{s.ecart != null ? <strong className={Number(s.ecart) !== 0 ? "badge-due" : ""}>{fmt(s.ecart)}</strong> : "—"}</td>
+                  <td>{s.cashierNote ? <span title={s.cashierNote}>{s.cashierNote.slice(0, 40)}{s.cashierNote.length > 40 ? "…" : ""}</span> : "—"}</td>
+                  <td>
+                    <div className="actions">
+                      <button className={activeSessionId === s.id ? "primary" : "secondary"} onClick={() => void loadOps(s.id)}>Voir détail</button>
+                      {s.status === "ouverte" && canClose && (
+                        <button
+                          className="secondary"
+                          onClick={() => {
+                            setActiveSessionId(s.id);
+                            setClosing(closing === s.id ? null : s.id);
+                            if (!ops[s.id]) void loadOps(s.id);
+                          }}
+                        >
+                          Clôturer
+                        </button>
+                      )}
+                      {s.status === "fermee" && canValidate && <button className="secondary" onClick={() => void validateDay(s, "valider")}>Valider journée</button>}
+                      {s.status === "fermee" && canValidate && <button className="danger" onClick={() => void validateDay(s, "refuser")}>Refuser</button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
       {activeSession && (
         <section className="panel wide-panel work-panel">

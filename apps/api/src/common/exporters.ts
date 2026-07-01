@@ -18,6 +18,14 @@ export async function buildXlsx(
   wb.creator = "PAOSITRA";
   wb.created = new Date();
   const ws = wb.addWorksheet(sheetName);
+  ws.pageSetup = {
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: { left: 0.4, right: 0.4, top: 0.6, bottom: 0.6, header: 0.2, footer: 0.2 }
+  };
   if (title) {
     ws.mergeCells(1, 1, 1, columns.length);
     const c = ws.getCell(1, 1);
@@ -31,6 +39,7 @@ export async function buildXlsx(
     width: col.width ?? 22
   }));
   const headerRow = ws.getRow(title ? 3 : 1);
+  ws.views = [{ state: "frozen", ySplit: title ? 3 : 1 }];
   headerRow.font = { bold: true };
   headerRow.fill = {
     type: "pattern",
@@ -71,7 +80,10 @@ export function buildPdf(
       doc.font("Helvetica");
       doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke("#ccc");
       doc.moveDown(0.2);
-      for (const row of lines) {
+      const printableLines = lines.length > 0
+        ? lines
+        : [headers.map((_, index) => index === 0 ? "Aucune donnée disponible pour ce périmètre." : "")];
+      for (const row of printableLines) {
         y = doc.y;
         if (y > doc.page.height - 60) {
           doc.addPage();

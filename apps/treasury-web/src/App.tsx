@@ -60,6 +60,7 @@ interface RbacRole {
 }
 
 type TreasuryTab =
+  | "guide"
   | "institutions"
   | "placements"
   | "receivables"
@@ -91,6 +92,22 @@ const emptyUserForm = {
   mustChangePassword: true
 };
 
+const currencyOptions = ["MGA", "EUR", "USD"];
+const depositModeOptions = [
+  "Dépôt à terme",
+  "Compte bancaire",
+  "Espèces en caisse",
+  "Virement bancaire",
+  "Chèque"
+];
+const interestModeOptions = [
+  "Exact/365",
+  "Exact/360",
+  "30/360",
+  "Simple/360",
+  "Simple/365"
+];
+
 
 export function App() {
   const auth = useAuth();
@@ -115,7 +132,7 @@ export function App() {
 
 function TreasuryWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<TreasuryTab>("placements");
+  const [tab, setTab] = useState<TreasuryTab>("guide");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -127,6 +144,17 @@ function TreasuryWorkspace() {
   const [loading, setLoading] = useState(false);
   const [simResult, setSimResult] = useState<{ interest: number; total: number; maturityDate: string; basis: string } | null>(null);
   const [insights, setInsights] = useState<Array<{ id: string; maturityDate: string; daysRemaining: number; maturingSoon: boolean }>>([]);
+  const canSeeClarifications = [
+    "demo.admin@paositra-demo.mg",
+    "demo.admin@paositra.local"
+  ].includes(auth.user?.email ?? "");
+  const hasTreasuryBusinessAccess =
+    auth.hasPermission("treasury:dashboard:read") ||
+    auth.hasPermission("treasury:institutions:read") ||
+    auth.hasPermission("treasury:placements:read") ||
+    auth.hasPermission("treasury:receivables:read") ||
+    auth.hasPermission("treasury:accounts:read") ||
+    auth.hasPermission("treasury:budget:read");
 
   const load = useCallback(async () => {
     try {
@@ -175,14 +203,15 @@ function TreasuryWorkspace() {
   }, [load]);
 
   const visibleTabs: Array<{ id: TreasuryTab; label: string }> = [
+    hasTreasuryBusinessAccess && { id: "guide", label: "Guide démo Lot 1" },
     auth.hasPermission("treasury:placements:read") && { id: "placements", label: "Placements" },
-    auth.hasPermission("treasury:receivables:read") && { id: "receivables", label: "Creances" },
+    auth.hasPermission("treasury:receivables:read") && { id: "receivables", label: "Créances" },
     auth.hasPermission("treasury:accounts:read") && { id: "accounts", label: "Comptes courants" },
     auth.hasPermission("treasury:budget:read") && { id: "budget", label: "Budget" },
     auth.hasPermission("treasury:dashboard:read") && { id: "dashboard", label: "Tableau de bord" },
     auth.hasPermission("treasury:institutions:read") && { id: "institutions", label: "Institutions" },
-    auth.hasPermission("platform:roles:read") && { id: "roles", label: "Roles & habilitations" },
-    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Parcours a cadrer" },
+    auth.hasPermission("platform:roles:read") && { id: "roles", label: "Rôles & habilitations" },
+    canSeeClarifications && { id: "clarifications", label: "Parcours à cadrer" },
     auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
     auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
   ].filter(Boolean) as Array<{ id: TreasuryTab; label: string }>;
@@ -354,7 +383,7 @@ function TreasuryWorkspace() {
 
   return (
     <>
-      <section className="panel module-home">
+      {hasTreasuryBusinessAccess && <section className="panel module-home">
         <div>
           <p className="eyebrow">LOT 1 — TRÉSORERIE</p>
           <h2>Modules opérationnels</h2>
@@ -363,25 +392,25 @@ function TreasuryWorkspace() {
           <div className="kpi-card">
             <span>Institutions financières</span>
             <strong>{institutions.length}</strong>
-            <small>Données lues depuis /api/v1/treasury/institutions</small>
+            <small>Données issues du référentiel financier chargé dans la démonstration. Les institutions officielles restent à confirmer par PAOSITRA.</small>
           </div>
           <div className="kpi-card">
             <span>Placements</span>
             <strong>{placements.length}</strong>
-            <small>Données lues depuis /api/v1/treasury/placements</small>
+            <small>Placements enregistrés dans le périmètre autorisé du compte connecté.</small>
           </div>
           <div className="kpi-card">
             <span>Rôles proposés</span>
             <strong>{roles.length}</strong>
-            <small>Proposition KCI — à valider PAOMA</small>
+            <small>Rôles de travail proposés pour la démonstration, à valider ou corriger par PAOSITRA.</small>
           </div>
           <div className="kpi-card">
             <span>Audit consultable</span>
             <strong>{auditEvents.length}</strong>
-            <small>Derniers événements chargés depuis l'API</small>
+            <small>Dernières actions enregistrées dans la piste d'audit de la démonstration.</small>
           </div>
         </div>
-      </section>
+      </section>}
       <nav className="tabs" aria-label="Modules de tresorerie">
         {visibleTabs.map((item) => (
           <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>
@@ -391,9 +420,14 @@ function TreasuryWorkspace() {
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
       {visibleTabs.length === 0 ? (
-        <Message type="info">Votre compte n'a acces a aucun module Tresorerie.</Message>
+        <Message type="info">Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre.</Message>
       ) : !canSeeCurrentTab ? (
-        <Message type="info">Votre compte n'a pas acces a ce module.</Message>
+        <Message type="info">Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre.</Message>
+      ) : tab === "guide" ? (
+        <TreasuryDemoGuide
+          canOpen={(target) => visibleTabs.some((item) => item.id === target)}
+          onOpen={setTab}
+        />
       ) : tab === "dashboard" ? (
         <TreasuryDashboardModule />
       ) : tab === "budget" ? (
@@ -521,7 +555,10 @@ function TreasuryWorkspace() {
                     <AmountInput required value={placementForm.principalAmount} onValueChange={(value) => setPlacementForm({ ...placementForm, principalAmount: value })} />
                   </label>
                   <label>Devise (code ISO à trois lettres)
-                    <input maxLength={3} required value={placementForm.currency} onChange={(e) => setPlacementForm({ ...placementForm, currency: e.target.value.toUpperCase() })} />
+                    <select required value={placementForm.currency} onChange={(e) => setPlacementForm({ ...placementForm, currency: e.target.value })}>
+                      <option value="">Sélectionner</option>
+                      {currencyOptions.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+                    </select>
                   </label>
                   <label>Taux d'intérêt annuel (%)
                     <input inputMode="decimal" required value={placementForm.annualInterestRate} onChange={(e) => setPlacementForm({ ...placementForm, annualInterestRate: e.target.value })} />
@@ -530,10 +567,16 @@ function TreasuryWorkspace() {
                     <input type="number" min="1" required value={placementForm.durationDays} onChange={(e) => setPlacementForm({ ...placementForm, durationDays: e.target.value })} />
                   </label>
                   <label>Mode de dépôt
-                    <input required value={placementForm.depositMode} onChange={(e) => setPlacementForm({ ...placementForm, depositMode: e.target.value })} />
+                    <select required value={placementForm.depositMode} onChange={(e) => setPlacementForm({ ...placementForm, depositMode: e.target.value })}>
+                      <option value="">Sélectionner</option>
+                      {depositModeOptions.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                    </select>
                   </label>
                   <label>Mode de calcul des intérêts
-                    <input required value={placementForm.interestCalculationMode} onChange={(e) => setPlacementForm({ ...placementForm, interestCalculationMode: e.target.value })} />
+                    <select required value={placementForm.interestCalculationMode} onChange={(e) => setPlacementForm({ ...placementForm, interestCalculationMode: e.target.value })}>
+                      <option value="">Sélectionner</option>
+                      {interestModeOptions.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                    </select>
                   </label>
                   <label>Date de début
                     <input type="date" required value={placementForm.startDate} onChange={(e) => setPlacementForm({ ...placementForm, startDate: e.target.value })} />
@@ -559,12 +602,13 @@ function TreasuryWorkspace() {
                 </div>
               )}
             </div>
-            {placements.length === 0 ? <p className="empty">Aucun placement enregistré.</p> : (
-              <div className="table-wrap">
+            <div className="table-wrap">
                 <table>
                   <thead><tr><th>Institution</th><th>Montant</th><th>Début</th><th>Durée</th><th>Échéance</th><th>État</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {placements.map((item) => {
+                    {placements.length === 0 ? (
+                      <tr><td colSpan={7} className="empty">Aucun placement n'est enregistré dans ce périmètre. Le gabarit et les exports restent disponibles pour l'initialisation validée.</td></tr>
+                    ) : placements.map((item) => {
                       const ins = insights.find((x) => x.id === item.id);
                       const statusLabel = item.status === "open" ? "Ouvert" : item.status === "closed" ? "Clôturé" : item.status === "cancelled" ? "Annulé" : item.status === "renewed" ? "Renouvelé" : "Rapatrié";
                       return (
@@ -589,7 +633,6 @@ function TreasuryWorkspace() {
                   </tbody>
                 </table>
               </div>
-            )}
           </section>
         </div>
       )}
@@ -597,16 +640,145 @@ function TreasuryWorkspace() {
   );
 }
 
+const treasuryDemoSteps: Array<{
+  number: number;
+  title: string;
+  summary: string;
+  status: "Disponible en démo" | "Partiel" | "À cadrer";
+  target?: TreasuryTab;
+}> = [
+  {
+    number: 1,
+    title: "Structure globale",
+    summary: "Navigation par modules, interfaces uniformes, API versionnée, recherche locale selon les écrans, archivage et audit des actions sensibles.",
+    status: "Partiel",
+    target: "dashboard"
+  },
+  {
+    number: 2,
+    title: "Placements",
+    summary: "Ouverture, simulation, renouvellement, rapatriement, clôture, annulation, échéancier et situation Excel.",
+    status: "Disponible en démo",
+    target: "placements"
+  },
+  {
+    number: 3,
+    title: "Facturation et recouvrement",
+    summary: "Créances, relances, virements de régularisation, clôture ou contentieux, situation Excel et état PDF.",
+    status: "Disponible en démo",
+    target: "receivables"
+  },
+  {
+    number: 4,
+    title: "Gestion des comptes",
+    summary: "Comptes MGA ou devises, mouvements, rapprochement manuel et journal. Portefeuille électronique et imports externes restent à cadrer.",
+    status: "Partiel",
+    target: "accounts"
+  },
+  {
+    number: 5,
+    title: "Comptes courants",
+    summary: "Comptes, encaissements, décaissements, chèques, états, rapprochement et historique des mouvements.",
+    status: "Partiel",
+    target: "accounts"
+  },
+  {
+    number: 6,
+    title: "Élaboration du budget",
+    summary: "Ouverture d'exercice et lignes de crédit. Versions, prévisions consolidées et arrêté d'exercice restent à confirmer.",
+    status: "Partiel",
+    target: "budget"
+  },
+  {
+    number: 7,
+    title: "Exécution du budget",
+    summary: "Création de dossiers, références, étapes de validation, rejet, paiement, archivage et bordereau.",
+    status: "Disponible en démo",
+    target: "budget"
+  },
+  {
+    number: 8,
+    title: "Reporting et tableaux de bord",
+    summary: "Indicateurs consolidés et exports. Les modèles officiels et statistiques avancées restent à valider par PAOSITRA.",
+    status: "Partiel",
+    target: "dashboard"
+  },
+  {
+    number: 9,
+    title: "Paramètres et configuration",
+    summary: "Institutions, devises, modes de dépôt et calculs guidés. Taux de change, calendriers et rubriques avancées restent à cadrer.",
+    status: "Partiel",
+    target: "institutions"
+  },
+  {
+    number: 10,
+    title: "Gestion des utilisateurs",
+    summary: "Création des comptes, rôles proposés, permissions, audit et changement obligatoire du mot de passe selon le profil.",
+    status: "Partiel",
+    target: "users"
+  }
+];
+
+function TreasuryDemoGuide({
+  canOpen,
+  onOpen
+}: {
+  canOpen: (target: TreasuryTab) => boolean;
+  onOpen: (target: TreasuryTab) => void;
+}) {
+  return (
+    <section className="panel demo-guide">
+      <div className="panel-head">
+        <div>
+          <p className="eyebrow">DÉMONSTRATION LOT 1</p>
+          <h2>Parcours conseillé</h2>
+          <p className="muted">Commencez par Placements, puis Créances, Comptes courants, Budget et Tableau de bord.</p>
+        </div>
+      </div>
+      <div className="demo-guide-list">
+        {treasuryDemoSteps.map((step) => (
+          <article key={step.number} className="demo-guide-row">
+            <span className="demo-guide-number">{step.number}</span>
+            <div>
+              <h3>{step.title}</h3>
+              <p>{step.summary}</p>
+            </div>
+            <span className={`badge ${step.status === "Disponible en démo" ? "source-validated" : "warning"}`}>
+              {step.status}
+            </span>
+            {step.target && canOpen(step.target) ? (
+              <button className="secondary" type="button" onClick={() => onOpen(step.target!)}>
+                Ouvrir
+              </button>
+            ) : (
+              <span className="muted">Selon habilitation</span>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
   const filtered = roles.filter((r) => r.lot === "common" || r.lot === "lot1");
   const byLot = (l: string) => filtered.filter((r) => r.lot === l);
+  const scopeLabel = (scope: string) =>
+    ({
+      global: "Toute la plateforme",
+      organ: "Organe",
+      direction: "Direction",
+      region: "Région",
+      agency: "Agence",
+      counter: "Caisse ou guichet"
+    })[scope] ?? scope;
 
   return (
     <section className="panel">
       <h2>Rôles &amp; habilitations</h2>
       <div className="roles-table-notice">
-        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
-        Le DAO reste la référence contractuelle.
+        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOSITRA avant toute utilisation en production.
+        Le DAOO reste la référence prioritaire.
       </div>
       {(["common", "lot1"] as const).map((l) => {
         const items = byLot(l);
@@ -632,7 +804,7 @@ function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
                     <tr key={role.code}>
                       <td><code>{role.code}</code></td>
                       <td>{role.label}</td>
-                      <td>{role.scopeType}</td>
+                      <td>{scopeLabel(role.scopeType)}</td>
                       <td>{role.description ?? "—"}</td>
                       <td><span className="badge warning">Proposition à valider</span></td>
                     </tr>
@@ -650,17 +822,111 @@ function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
   );
 }
 
-const treasuryClarifications = [
-  { num: 1, title: "Matrice des rôles Lot 1", statut: "à clarifier", contenu: "Profils Lot 1 (directeur trésorerie, gestionnaire placement, trésorier, contrôleur), périmètres d'organe et délégations à définir contractuellement par PAOMA." },
-  { num: 2, title: "Calculs financiers placements", statut: "à clarifier", contenu: "Formules d'intérêts (exact/365, 30/360, etc.), arrondi, fiscalité et pénalités de rupture non définies dans le DAO. À valider avant activation du moteur." },
-  { num: 3, title: "Référentiel institutions financières", statut: "démo front", contenu: "Parcours représenté en démonstration front. La liste des banques et institutions autorisées doit être validée par PAOMA avant usage officiel." },
-  { num: 4, title: "Workflows de placement", statut: "partiel", contenu: "Ouverture et annulation sont implémentés. Renouvellement, rapatriement principal/intérêts et prolongation nécessitent des règles métier validées." },
-  { num: 5, title: "Référentiel comptable trésorerie", statut: "à clarifier", contenu: "PCOP 2006 utilisé comme cadrage. Comptes, journaux et schémas débit/crédit pour placements, virements et rapprochements doivent être validés par PAOMA." },
-  { num: 6, title: "Facturation et recouvrement", statut: "démo front", contenu: "Parcours représenté en démonstration front. CPS, modèles de factures, workflow de réclamation et règles de rapprochement à valider par PAOMA avant persistance officielle." },
-  { num: 7, title: "Comptes en devises", statut: "démo front", contenu: "Parcours représenté en démonstration front. Comptes réels, taux de change, règles comptables et formats d'import bancaire à valider par PAOMA." },
-  { num: 8, title: "Rapprochement bancaire", statut: "démo front", contenu: "Parcours représenté en démonstration front. Formats de relevés, tolérances et règles de traitement des anomalies à valider par PAOMA." },
-  { num: 9, title: "Reporting réglementaire Lot 1", statut: "démo front", contenu: "Parcours représenté en démonstration front. Les modèles de rapports officiels, périodicités et destinataires restent à valider par PAOMA." },
-  { num: 10, title: "Interopérabilité Lot 1 / Lot 2", statut: "à clarifier", contenu: "Les flux AC (accusés de crédit), rapatriements et virements entre trésorerie centrale et agences nécessitent une définition contractuelle des interfaces." }
+const treasuryClarifications: Array<{ num: number; title: string; statut: string; contenu: string[] }> = [
+  {
+    num: 1,
+    title: "Matrice des rôles Lot 1",
+    statut: "à clarifier",
+    contenu: [
+      "Le Lot 1 doit distinguer les rôles de consultation, saisie, contrôle, validation et décision financière.",
+      "Proposition KCI : séparer direction financière, trésorier chef, comptable, auditeur et consultation direction, avec des périmètres d'accès par direction, compte, institution ou opération.",
+      "Attente PAOSITRA : confirmer les profils réels, les délégations, les suppléances et les incompatibilités, par exemple entre saisie d'une opération et validation."
+    ]
+  },
+  {
+    num: 2,
+    title: "Calculs financiers placements",
+    statut: "à clarifier",
+    contenu: [
+      "Les intérêts peuvent être calculés selon plusieurs bases. Exact/365 compte les jours réels sur une année de 365 jours. Exact/360 compte les jours réels sur 360 jours, souvent utilisé par des banques. 30/360 considère chaque mois comme 30 jours, ce qui simplifie les calculs mais peut créer un écart avec les jours réels.",
+      "Proposition KCI : rendre la formule paramétrable par institution et par produit de placement, sans figer une règle officielle tant que PAOSITRA n'a pas confirmé les contrats bancaires.",
+      "Arrondi : il faut préciser si les intérêts sont arrondis à l'ariary inférieur, supérieur, le plus proche, ou selon une précision comptable. Le backend doit appliquer cette règle de façon unique pour éviter les écarts entre écran, PDF et comptabilité.",
+      "Fiscalité : selon le contexte malgache et la nature de PAOSITRA, il faut confirmer s'il existe une retenue, taxe ou exonération sur les intérêts perçus, qui la calcule, à quel moment et sur quelle base.",
+      "Risque si non confirmé : le moteur peut simuler un placement, mais les intérêts, échéances, pénalités et écritures comptables ne doivent pas être considérés comme définitifs."
+    ]
+  },
+  {
+    num: 3,
+    title: "Référentiel institutions financières",
+    statut: "démo front",
+    contenu: [
+      "Le référentiel doit distinguer banque commerciale, banque centrale, compte CCP, caisse interne, espèces, mobile money éventuel et autre organisme financier.",
+      "Liste de travail à préparer avec PAOSITRA : BNI Madagascar, BOA Madagascar, BFV-SG, MCB Madagascar, Société Générale Madagasikara, BMOI, Baobab Banque, Banque Centrale de Madagascar, comptes CCP et caisse interne. Cette liste est une proposition de cadrage, pas un référentiel officiel.",
+      "Proposition KCI : enrichir la fiche institution avec type, code interne, devise, compte rattaché, mode de dépôt autorisé, contact, statut actif/inactif et validation PAOSITRA.",
+      "Cas espèces : certaines opérations peuvent ne pas passer par une banque. Le logiciel doit pouvoir représenter une caisse ou un dépôt espèces, avec des contrôles de plafond, billetage et justification.",
+      "Attente PAOSITRA : fournir la liste officielle des institutions, comptes, conventions bancaires, devises et modes de règlement autorisés."
+    ]
+  },
+  {
+    num: 4,
+    title: "Circuit de traitement des placements",
+    statut: "partiel",
+    contenu: [
+      "Le circuit doit préciser qui propose un placement, qui le contrôle, qui l'approuve, qui constate l'échéance, et qui valide le rapatriement des fonds.",
+      "Proposition KCI : brouillon > contrôle > validation financière > ouverture > suivi échéance > renouvellement ou rapatriement > clôture comptable.",
+      "Attente PAOSITRA : confirmer les seuils d'autorisation, pièces justificatives, pénalités de rupture et règles de double validation."
+    ]
+  },
+  {
+    num: 5,
+    title: "Référentiel comptable trésorerie",
+    statut: "à clarifier",
+    contenu: [
+      "Le PCOP 2006 sert de cadrage provisoire pour structurer comptes, journaux, écritures débit/crédit, contrepassations et périodes.",
+      "Proposition KCI : garder une comptabilité configurable par type d'opération afin de remplacer les schémas provisoires par les schémas PAOSITRA validés.",
+      "Attente PAOSITRA : fournir le plan de comptes applicable, les journaux, les schémas d'écriture par placement, créance, paiement, rapprochement et régularisation."
+    ]
+  },
+  {
+    num: 6,
+    title: "Facturation et recouvrement",
+    statut: "démo front",
+    contenu: [
+      "Le module doit cadrer les créances, relances, virements reçus, pièces justificatives, contentieux et clôtures.",
+      "Proposition KCI : permettre la saisie d'une créance avec débiteur, montant, devise, date d'émission, échéance, description, statut, événements et exports.",
+      "Attente PAOSITRA : valider les modèles de factures, CPS, règles de relance, formats de reçu et autorisations de clôture ou contentieux."
+    ]
+  },
+  {
+    num: 7,
+    title: "Comptes en devises",
+    statut: "démo front",
+    contenu: [
+      "Certains comptes peuvent être en MGA ou en devise étrangère. Les taux de change et dates de valeur doivent être cadrés.",
+      "Proposition KCI : stocker la devise, le solde, la banque, les mouvements et la source du taux de change, sans calcul définitif avant validation.",
+      "Attente PAOSITRA : confirmer les devises autorisées, règles de conversion, source officielle des taux et traitements comptables des écarts de change."
+    ]
+  },
+  {
+    num: 8,
+    title: "Rapprochement bancaire",
+    statut: "démo front",
+    contenu: [
+      "Le rapprochement compare les mouvements internes avec les relevés bancaires ou justificatifs externes.",
+      "Proposition KCI : importer ou saisir les mouvements, rapprocher les lignes, isoler les écarts et produire un rapport PDF/Excel.",
+      "Attente PAOSITRA : fournir les formats de relevés, tolérances, règles de lettrage, délais et responsables de validation."
+    ]
+  },
+  {
+    num: 9,
+    title: "Reporting réglementaire Lot 1",
+    statut: "démo front",
+    contenu: [
+      "Les rapports doivent être imprimables, traçables et cohérents avec les données API, base, PDF et Excel.",
+      "Proposition KCI : produire des gabarits A4 provisoires avec mention démonstration non contractuelle, même lorsqu'aucune donnée n'est présente.",
+      "Attente PAOSITRA : fournir les modèles officiels, signatures, périodicités, destinataires et règles d'archivage."
+    ]
+  },
+  {
+    num: 10,
+    title: "Relations entre Lot 1 et Lot 2",
+    statut: "à clarifier",
+    contenu: [
+      "Les flux entre trésorerie centrale et agences concernent les virements, accusés de crédit, versements, rapatriements, régularisations et demandes de valeurs.",
+      "Proposition KCI : garder les lots séparés métier, mais prévoir des interfaces internes contrôlées pour rapprocher les opérations terrain et la trésorerie.",
+      "Attente PAOSITRA : confirmer les événements transmis, formats, pièces, validateurs et délais entre Lot 1 et Lot 2."
+    ]
+  }
 ];
 
 function TreasuryPointsAClarifier() {
@@ -668,13 +934,13 @@ function TreasuryPointsAClarifier() {
 
   return (
     <section className="panel">
-      <h2>Parcours à cadrer avec PAOMA — Lot 1 Trésorerie</h2>
+      <h2>Parcours à cadrer avec PAOSITRA — Lot 1 Trésorerie</h2>
       <p className="muted">
         Ces parcours représentent les fonctions à cadrer issues de l'analyse du DAO Lot 1.
-        Ils restent à valider formellement par PAOMA avant activation comme règles définitives.
+        Ils restent à valider formellement par PAOSITRA avant activation comme règles définitives.
       </p>
       <Message type="info">
-        Le DAO reste la référence contractuelle. Ces parcours de démonstration ne remplacent pas les règles définitives PAOMA.
+        Le DAOO reste la référence prioritaire. Ces parcours de démonstration ne remplacent pas les règles définitives PAOSITRA.
       </Message>
       {treasuryClarifications.map((section) => (
         <div className="clarify-section" key={section.num}>
@@ -690,7 +956,9 @@ function TreasuryPointsAClarifier() {
           </div>
           {open === section.num && (
             <div className="clarify-section-body">
-              <p>{section.contenu}</p>
+              {section.contenu.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           )}
         </div>
@@ -808,7 +1076,11 @@ function TreasuryReceivables() {
           <form onSubmit={create}>
             <label>Débiteur<input required maxLength={240} value={form.debtorName} onChange={(e) => setForm({ ...form, debtorName: e.target.value })} /></label>
             <label>Montant<AmountInput required value={form.amount} onValueChange={(value) => setForm({ ...form, amount: value })} /></label>
-            <label>Devise<input maxLength={3} required value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></label>
+            <label>Devise
+              <select required value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                {currencyOptions.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+              </select>
+            </label>
             <label>Date d'émission<input type="date" required value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} /></label>
             <label>Date d'échéance<input type="date" required value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></label>
             <label>Description<input maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
@@ -826,12 +1098,13 @@ function TreasuryReceivables() {
             </div>
           )}
         </div>
-        {items.length === 0 ? <p className="empty">Aucune créance enregistrée.</p> : (
-          <div className="table-wrap">
+        <div className="table-wrap">
             <table>
               <thead><tr><th>Référence</th><th>Débiteur</th><th>Montant</th><th>Échéance</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
-                {items.map((r) => {
+                {items.length === 0 ? (
+                  <tr><td colSpan={6} className="empty">Aucune créance n'est enregistrée. Le tableau et les exports restent disponibles pour l'initialisation validée.</td></tr>
+                ) : items.map((r) => {
                   const overdue = r.status !== "cloturee" && r.dueDate < new Date().toISOString().slice(0, 10);
                   return (
                     <tr key={r.id}>
@@ -855,7 +1128,6 @@ function TreasuryReceivables() {
               </tbody>
             </table>
           </div>
-        )}
       </section>
     </div>
   );

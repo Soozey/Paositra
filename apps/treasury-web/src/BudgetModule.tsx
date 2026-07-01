@@ -72,9 +72,9 @@ export function BudgetModule() {
   }
 
   return (
-    <div className="grid">
-      {msg && <Message type={msg.type}>{msg.text}</Message>}
-      <section className="panel">
+    <div className="grid budget-layout">
+      {msg && <div className="wide-panel"><Message type={msg.type}>{msg.text}</Message></div>}
+      <section className="panel engagement-panel">
         <div className="panel-head">
           <h2>Exercice budgétaire</h2>
           <div className="actions">
@@ -96,15 +96,15 @@ export function BudgetModule() {
       </section>
       <section className="panel">
         <h2>Lignes de crédit (ouvert / engagé / disponible)</h2>
-        {lines.length === 0 ? <p className="empty">Aucune ligne pour cet exercice.</p> : (
-          <div className="table-wrap"><table>
+        <div className="table-wrap"><table>
             <thead><tr><th>Direction</th><th>Programme</th><th>Compte</th><th>Ouvert</th><th>Engagé</th><th>Disponible</th></tr></thead>
-            <tbody>{lines.map((l) => (
+            <tbody>{lines.length === 0 ? (
+              <tr><td colSpan={6} className="empty">Aucune ligne de crédit pour cet exercice. Le gabarit est prêt pour les données budgétaires validées.</td></tr>
+            ) : lines.map((l) => (
               <tr key={l.id}><td>{l.direction}</td><td>{l.program}</td><td>{l.accountCode}</td><td>{fmt(l.allocated)}</td><td>{fmt(l.engaged)}</td>
                 <td><strong className={Number(l.available) <= 0 ? "badge-due" : ""}>{fmt(l.available)}</strong></td></tr>
             ))}</tbody>
           </table></div>
-        )}
         {canManage && exId && (
           <form onSubmit={createLine} className="inline-form">
             <input placeholder="Direction" required value={lineForm.direction} onChange={(e) => setLineForm({ ...lineForm, direction: e.target.value })} />
@@ -127,17 +127,17 @@ export function BudgetModule() {
             <button className="primary" disabled={loading} type="submit">Créer le dossier</button>
           </form>
         )}
-        {engs.length === 0 ? <p className="empty">Aucun dossier d'engagement.</p> : (
-          <div className="table-wrap"><table>
+        <div className="table-wrap"><table>
             <thead><tr><th>Référence</th><th>Objet</th><th>Ligne</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead>
-            <tbody>{engs.map((en) => (
+            <tbody>{engs.length === 0 ? (
+              <tr><td colSpan={6} className="empty">Aucun dossier d'engagement. Le circuit de traitement est prêt pour les dossiers autorisés.</td></tr>
+            ) : engs.map((en) => (
               <tr key={en.id}><td>{en.reference}</td><td>{en.object}</td><td>{en.lineLabel}</td><td>{fmt(en.amount)}</td><td>{ESTATUS[en.status] ?? en.status}</td>
                 <td><div className="actions">{(NEXT[en.status] ?? []).filter((a) => auth.hasPermission(a.perm)).map((a) =>
                   <button key={a.action} className={a.danger ? "danger" : "secondary"} onClick={() => void transition(en, a.action)}>{a.label}</button>)}</div></td>
               </tr>
             ))}</tbody>
           </table></div>
-        )}
       </section>
     </div>
   );

@@ -22,7 +22,10 @@ export function TreasuryDashboardModule() {
     <section className="panel">
       <div className="panel-head">
         <h2>Tableau de bord Trésorerie <span className="badge source-demo">DEMO</span></h2>
-        <button className="secondary" type="button" onClick={() => void downloadFile(auth.token, "/api/v1/treasury/dashboard.pdf", "tableau-bord-tresorerie-DEMO.pdf").then((e) => e && setMsg({ type: "error", text: e }))}>Export PDF</button>
+        <div className="actions">
+          <button className="secondary" type="button" onClick={() => void downloadFile(auth.token, "/api/v1/treasury/dashboard.xlsx", "tableau-bord-tresorerie-DEMO.xlsx").then((e) => e && setMsg({ type: "error", text: e }))}>Export Excel</button>
+          <button className="secondary" type="button" onClick={() => void downloadFile(auth.token, "/api/v1/treasury/dashboard.pdf", "tableau-bord-tresorerie-DEMO.pdf").then((e) => e && setMsg({ type: "error", text: e }))}>Export PDF</button>
+        </div>
       </div>
       <div className="kpi-grid">
         <div className="kpi-card"><span>Placements actifs</span><strong>{k.placementsActifs}</strong></div>

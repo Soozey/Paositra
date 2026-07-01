@@ -64,6 +64,74 @@ describe("Operations application shell", () => {
     expect(screen.queryByRole("button", { name: "Fermer" })).not.toBeInTheDocument();
   });
 
+  it("shows human source labels instead of API implementation details", async () => {
+    sessionStorage.setItem("paositra_access_token", "technical-test-token");
+    sessionStorage.setItem(
+      "paositra_user",
+      JSON.stringify({
+        id: "463db44f-23bc-4c0f-a0e4-87b3ad52da3c",
+        email: "demo.dop@paositra-demo.mg",
+        displayName: "[DEMO] Directeur Operations",
+        sessionId: "2b8a74e7-a60c-4dc2-b752-52a56cf71b74",
+        mustChangePassword: false,
+        permissions: [
+          { code: "operations:agencies:read", scopeType: "global", scopeId: null },
+          { code: "platform:roles:read", scopeType: "global", scopeId: null },
+          { code: "platform:audit:read", scopeType: "global", scopeId: null }
+        ]
+      })
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/api/v1/auth/me")) {
+          return new Response(JSON.stringify(JSON.parse(sessionStorage.getItem("paositra_user")!)), { status: 200 });
+        }
+        return new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 });
+      })
+    );
+
+    renderApp();
+
+    expect(await screen.findByText(/référentiel agences chargé dans la démonstration/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("/api/v1/operations/agencies");
+    expect(document.body.textContent).not.toContain("Source paoma_validated");
+    expect(document.body.textContent).not.toContain("Derniers événements chargés depuis l'API");
+  });
+
+  it("hides project framing paths from auditor profiles", async () => {
+    sessionStorage.setItem("paositra_access_token", "technical-test-token");
+    sessionStorage.setItem(
+      "paositra_user",
+      JSON.stringify({
+        id: "463db44f-23bc-4c0f-a0e4-87b3ad52da3c",
+        email: "demo.audit@paositra.local",
+        displayName: "[DEMO] Audit",
+        sessionId: "2b8a74e7-a60c-4dc2-b752-52a56cf71b74",
+        mustChangePassword: false,
+        permissions: [
+          { code: "operations:agencies:read", scopeType: "global", scopeId: null },
+          { code: "platform:roles:read", scopeType: "global", scopeId: null },
+          { code: "platform:audit:read", scopeType: "global", scopeId: null }
+        ]
+      })
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [], total: 0 })
+      })
+    );
+
+    renderApp();
+
+    expect(await screen.findByRole("button", { name: "Agences" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Parcours à cadrer" })).not.toBeInTheDocument();
+  });
+
   it("keeps focus while typing multi-digit billetage counts", async () => {
     const user = {
       id: "463db44f-23bc-4c0f-a0e4-87b3ad52da3c",

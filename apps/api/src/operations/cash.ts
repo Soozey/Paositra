@@ -79,8 +79,10 @@ export class CashController {
       `SELECT s.id, s.register_label AS "registerLabel", s.business_date AS "businessDate", s.status,
               s.opening_amount AS "openingAmount", s.declared_amount AS "declaredAmount",
               s.counted_amount AS "countedAmount", s.ecart, s.cashier_note AS "cashierNote", s.version,
-              a.name AS "agencyName", a.code AS "agencyCode"
-       FROM operations.cash_sessions s JOIN operations.agencies a ON a.id=s.agency_id ${where} ORDER BY s.opened_at DESC`,
+              a.name AS "agencyName", a.code AS "agencyCode", u.display_name AS "cashierName"
+       FROM operations.cash_sessions s
+       JOIN operations.agencies a ON a.id=s.agency_id
+       JOIN platform.users u ON u.id=s.cashier_user_id ${where} ORDER BY s.opened_at DESC`,
       params) };
   }
 

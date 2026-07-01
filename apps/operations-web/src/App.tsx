@@ -124,10 +124,10 @@ function sourceBadgeClass(sourceType?: string) {
 }
 
 function sourceBadgeLabel(sourceType?: string) {
-  if (sourceType === "paoma_validated") return "Données réelles PAOMA";
+  if (sourceType === "paoma_validated") return "Validé PAOSITRA";
   if (sourceType === "public_source") return "Sources publiques";
-  if (sourceType === "demo_only") return "Démonstration";
-  return "À valider";
+  if (sourceType === "demo_only") return "Démonstration non contractuelle";
+  return "À confirmer PAOSITRA";
 }
 
 function AgenciesWorkspace() {
@@ -149,6 +149,16 @@ function AgenciesWorkspace() {
     auth.hasPermission("operations:cash:open") &&
     !auth.hasPermission("operations:agencies:write") &&
     !auth.hasPermission("operations:agencies:validate") &&
+    !auth.hasPermission("operations:dashboard:read") &&
+    !auth.hasPermission("operations:verification:read");
+  const canSeeClarifications = [
+    "demo.admin@paositra-demo.mg",
+    "demo.admin@paositra.local"
+  ].includes(auth.user?.email ?? "");
+  const hasTreasuryScopeOnly =
+    Boolean(auth.user?.permissions.some((permission) => permission.code.startsWith("treasury:"))) &&
+    !auth.hasPermission("operations:counters:read") &&
+    !auth.hasPermission("operations:agencies:read") &&
     !auth.hasPermission("operations:dashboard:read") &&
     !auth.hasPermission("operations:verification:read");
 
@@ -189,9 +199,9 @@ function AgenciesWorkspace() {
     auth.hasPermission("operations:dashboard:read") && { id: "opsdashboard", label: "Tableau de bord" },
     auth.hasPermission("operations:transfers:read") && { id: "valeurs", label: "Inter-agences" },
     auth.hasPermission("platform:notifications:read") && { id: "alertes", label: "Alertes" },
-    auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "referentiel", label: "Referentiel agences" },
-    auth.hasPermission("platform:roles:read") && { id: "roles", label: "Roles & habilitations" },
-    auth.hasPermission("platform:roles:read") && { id: "clarifications", label: "Parcours a cadrer" },
+    auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "referentiel", label: "Référentiel agences" },
+    auth.hasPermission("platform:roles:read") && { id: "roles", label: "Rôles & habilitations" },
+    canSeeClarifications && { id: "clarifications", label: "Parcours à cadrer" },
     auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
     auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
   ].filter(Boolean) as Array<{ id: OperationsTab; label: string }>;
@@ -275,7 +285,7 @@ function AgenciesWorkspace() {
 
   return (
     <>
-      {!isCashierOnly && <section className="panel module-home">
+      {!isCashierOnly && visibleTabs.length > 0 && <section className="panel module-home">
         <div>
           <p className="eyebrow">LOT 2 — OPÉRATIONS</p>
           <h2>Module agences opérationnel</h2>
@@ -284,25 +294,25 @@ function AgenciesWorkspace() {
           <div className="kpi-card">
             <span>Agences dans le référentiel</span>
             <strong>{agencies.length}</strong>
-            <small>Données lues depuis /api/v1/operations/agencies</small>
+            <small>Données issues du référentiel agences chargé dans la démonstration. Les codiques officiels restent à confirmer par PAOSITRA.</small>
             {agencies.some((a) => a.sourceType === "demo_only") && (
-              <small className="source-note">Dont données de démonstration (demo_only)</small>
+              <small className="source-note">Certaines lignes sont des données de démonstration non contractuelles.</small>
             )}
           </div>
           <div className="kpi-card">
-            <span>Agences validées PAOMA</span>
+            <span>Agences validées PAOSITRA</span>
             <strong>{agencies.filter((a) => a.validationStatus === "validated").length}</strong>
-            <small>Source paoma_validated uniquement</small>
+            <small>Agences officiellement validées par PAOSITRA. À ce stade, aucune validation officielle ne doit être supposée sans confirmation.</small>
           </div>
           <div className="kpi-card">
             <span>Rôles proposés</span>
             <strong>{roles.length}</strong>
-            <small>Proposition à valider PAOMA</small>
+            <small>Rôles de travail proposés pour organiser la démonstration. Ils devront être validés ou corrigés par PAOSITRA avant production.</small>
           </div>
           <div className="kpi-card">
             <span>Audit consultable</span>
             <strong>{auditEvents.length}</strong>
-            <small>Derniers événements chargés depuis l'API</small>
+            <small>Dernières actions enregistrées dans la piste d'audit de la démonstration.</small>
           </div>
         </div>
       </section>}
@@ -315,9 +325,13 @@ function AgenciesWorkspace() {
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
       {visibleTabs.length === 0 ? (
-        <Message type="info">Votre compte n'a acces a aucun module Operations.</Message>
+        <Message type="info">
+          {hasTreasuryScopeOnly
+            ? "Ce compte est limité au périmètre Trésorerie et comptabilité. Le référentiel agences relève du Lot 2."
+            : "Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre."}
+        </Message>
       ) : !canSeeCurrentTab ? (
-        <Message type="info">Votre compte n'a pas acces a ce module.</Message>
+        <Message type="info">Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre.</Message>
       ) : tab === "caisses" ? (
         <CashModule />
       ) : tab === "verification" ? (
@@ -541,8 +555,8 @@ function ReferentielAgences({
     }
   }
 
-  async function handleExport() {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/operations/agencies/export`, {
+  async function handleExport(path: string, filename: string) {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}${path}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) { onError("Export échoué."); return; }
@@ -550,7 +564,7 @@ function ReferentielAgences({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `agences-paoma-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -560,32 +574,40 @@ function ReferentielAgences({
       <div className="demo-title">
         <div>
           <h2>Référentiel agences</h2>
-          <p className="muted">Données tracées par source — proposition à valider par PAOMA</p>
+          <p className="muted">Données classées par origine et statut de validation PAOSITRA.</p>
         </div>
         {canExport && (
-          <button className="secondary" type="button" onClick={() => void handleExport()}>
-            Export CSV
-          </button>
+          <div className="actions">
+            <button className="secondary" type="button" onClick={() => void handleExport("/api/v1/operations/agencies/export.xlsx", `referentiel-agences-${new Date().toISOString().slice(0, 10)}.xlsx`)}>
+              Export Excel
+            </button>
+            <button className="secondary" type="button" onClick={() => void handleExport("/api/v1/operations/agencies/export.pdf", `referentiel-agences-${new Date().toISOString().slice(0, 10)}.pdf`)}>
+              Export PDF
+            </button>
+            <button className="secondary" type="button" onClick={() => void handleExport("/api/v1/operations/agencies/export", `referentiel-agences-${new Date().toISOString().slice(0, 10)}.csv`)}>
+              CSV
+            </button>
+          </div>
         )}
       </div>
       <div className="demo-disclaimer">
         Les agences, codiques et données géographiques affichés sont soit issus de sources publiques, soit proposés à titre de cadrage.
-        Ils devront être validés officiellement par PAOMA avant toute utilisation en production.
+        Ils devront être validés officiellement par PAOSITRA avant toute utilisation en production.
       </div>
       <div className="source-counters">
-        <span className="source-counter"><span className="badge source-validated">{counts.paoma_validated}</span> Validées PAOMA</span>
+        <span className="source-counter"><span className="badge source-validated">{counts.paoma_validated}</span> Validées PAOSITRA</span>
         <span className="source-counter"><span className="badge source-public">{counts.public_source}</span> Sources publiques</span>
         <span className="source-counter"><span className="badge source-demo">{counts.demo_only}</span> Démonstration</span>
-        <span className="source-counter"><span className="badge source-unknown">{counts.to_validate}</span> À valider</span>
+        <span className="source-counter"><span className="badge source-unknown">{counts.to_validate}</span> À confirmer</span>
       </div>
       <div className="filter-bar">
         <label>Source
           <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
             <option value="">Toutes</option>
-            <option value="paoma_validated">Données réelles PAOMA</option>
+            <option value="paoma_validated">Validé PAOSITRA</option>
             <option value="public_source">Sources publiques</option>
-            <option value="demo_only">Démonstration</option>
-            <option value="to_validate">À valider</option>
+            <option value="demo_only">Démonstration non contractuelle</option>
+            <option value="to_validate">À confirmer</option>
           </select>
         </label>
         <label>Validation
@@ -660,13 +682,22 @@ function ReferentielAgences({
 function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "lot2" | "all" }) {
   const filtered = lot === "all" ? roles : roles.filter((r) => r.lot === "common" || r.lot === lot);
   const byLot = (l: string) => filtered.filter((r) => r.lot === l);
+  const scopeLabel = (scope: string) =>
+    ({
+      global: "Toute la plateforme",
+      organ: "Organe",
+      direction: "Direction",
+      region: "Région",
+      agency: "Agence",
+      counter: "Caisse ou guichet"
+    })[scope] ?? scope;
 
   return (
     <section className="panel">
       <h2>Rôles &amp; habilitations</h2>
       <div className="roles-table-notice">
-        Tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
-        Le DAO reste la référence contractuelle.
+        Tous les rôles et périmètres listés sont des propositions à valider par PAOSITRA avant toute utilisation en production.
+        Le DAOO reste la référence prioritaire.
       </div>
       {(["common", "lot1", "lot2"] as const).map((l) => {
         const items = byLot(l);
@@ -692,7 +723,7 @@ function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "
                     <tr key={role.code}>
                       <td><code>{role.code}</code></td>
                       <td>{role.label}</td>
-                      <td>{role.scopeType}</td>
+                      <td>{scopeLabel(role.scopeType)}</td>
                       <td>{role.description ?? "—"}</td>
                       <td><span className="badge warning">Proposition à valider</span></td>
                     </tr>
@@ -710,84 +741,157 @@ function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "
   );
 }
 
-const clarificationSections = [
+const clarificationSections: Array<{ num: number; title: string; statut: string; contenu: string[] }> = [
   {
     num: 1,
     title: "Codification des agences",
-    statut: "à clarifier",
-    contenu: "Le format du codique PAOMA (public_code, codique, temporary_code) n'est pas défini dans le DAO. La structure proposée (code public à 3 chiffres, codique interne) est une hypothèse à confirmer."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO demande la gestion des agences, mais ne fournit pas la liste officielle des agences ni leurs codiques. Pour la démonstration, KCI utilise un code provisoire afin d'identifier les agences sans prétendre qu'il s'agit du codique officiel PAOSITRA.",
+      "Exemple : TMP-PF-ANA-TNR-008. TMP signifie code temporaire de démonstration, PF indique la source provisoire utilisée pour la démo, ANA désigne Analamanga, TNR Antananarivo, et 008 un numéro séquentiel provisoire.",
+      "Proposition KCI : utiliser ces codes temporaires uniquement pour la démonstration, puis les remplacer par les codiques officiels fournis par PAOSITRA.",
+      "Attente PAOSITRA : fournir la liste officielle des agences, bureaux, guichets et codiques, idéalement en Excel ou CSV.",
+      "Risque si non confirmé : le système peut fonctionner techniquement, mais les agences ne pourront pas être considérées comme référentiel officiel."
+    ]
   },
   {
     num: 2,
     title: "Types d'agences et hiérarchie",
-    statut: "proposition à valider",
-    contenu: "Types proposés : direction, agence_principale, agence_secondaire, bureau, point_service, guichet_financier. Hiérarchie (direction > agence_principale > bureau) à valider avec PAOMA."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO évoque les agences, les caisses, les guichets et les opérations, mais ne précise pas toute la hiérarchie organisationnelle.",
+      "Proposition KCI : utiliser une structure direction > agence principale > agence secondaire ou bureau > guichet ou caisse, afin de gérer les filtres, rattachements, droits d'accès et rapports par niveau.",
+      "Attente PAOSITRA : confirmer la hiérarchie réelle : directions, régions, agences principales, bureaux rattachés, guichets et caisses.",
+      "Risque si non confirmé : les droits d'accès, rapports régionaux et rattachements des utilisateurs peuvent être mal alignés avec l'organisation réelle."
+    ]
   },
   {
     num: 3,
-    title: "Découpage géographique officiel",
-    statut: "à clarifier",
-    contenu: "Le DAO cite 300 agences et un découpage régional. La correspondance région/district/commune utilisée dans cette démo est issue des données publiques de Madagascar — à confirmer par PAOMA."
+    title: "Liste des guichets et caisses",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO demande la gestion des guichets, caisses et opérations de caisse, mais ne donne pas la liste des caisses par agence, ni le nombre de guichets, ni leur rattachement.",
+      "Proposition KCI : prévoir une structure où chaque caisse appartient à une agence, et où chaque caissier est rattaché à une caisse ou à un guichet.",
+      "Attente PAOSITRA : fournir pour chaque agence la liste des caisses, guichets, caissiers, plafonds et règles d'ouverture ou fermeture.",
+      "Risque si non confirmé : la démonstration peut montrer le parcours, mais l'exploitation réelle des caisses ne pourra pas être sécurisée."
+    ]
   },
   {
     num: 4,
-    title: "Workflows de validation agences",
-    statut: "à clarifier",
-    contenu: "Le workflow de validation (proposition > validation référentiel > ouverture > fermeture) est une proposition. Les acteurs, délais et documents requis doivent être fournis par PAOMA."
+    title: "Circuit de validation des agences",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Un circuit de validation signifie les étapes à suivre avant qu'une agence soit considérée comme officielle et utilisable dans le logiciel.",
+      "Proposition KCI : proposition > contrôle > validation référentiel > ouverture opérationnelle > modification contrôlée > fermeture ou suspension.",
+      "Attente PAOSITRA : indiquer qui peut proposer une agence, qui valide, quels documents sont nécessaires, quel délai est applicable et qui peut fermer ou suspendre une agence.",
+      "Risque si non confirmé : une agence pourrait être utilisée dans le système sans validation administrative correcte."
+    ]
   },
   {
     num: 5,
-    title: "Modèle RBAC (rôles, périmètres, délégations)",
-    statut: "proposition à valider",
-    contenu: "19 rôles candidats proposés. Les périmètres (global, organ, direction, agency, counter), délégations, incompatibilités et suppléances doivent être définis par PAOMA."
+    title: "Gestion des droits par rôle",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "La gestion des droits par rôle définit ce que chaque utilisateur peut voir ou faire. Un caissier peut saisir des opérations de caisse, mais ne doit pas créer un autre caissier. Un administrateur système peut créer les comptes, mais ne doit pas faire les opérations de caisse.",
+      "Les périmètres d'accès proposés sont : global, direction, région, agence, caisse ou guichet.",
+      "La délégation donne temporairement le droit d'agir à la place d'une autre personne. L'incompatibilité évite les conflits d'intérêt, par exemple saisir puis vérifier la même opération. La suppléance désigne un remplaçant officiel pendant une absence.",
+      "Proposition KCI : utiliser 19 rôles de démonstration, tous marqués à valider PAOSITRA.",
+      "Attente PAOSITRA : valider les rôles, droits, périmètres, incompatibilités et cas de remplacement.",
+      "Risque si non confirmé : des utilisateurs pourraient avoir trop de droits ou pas assez, ce qui crée un risque opérationnel et de contrôle interne."
+    ]
   },
   {
     num: 6,
-    title: "Règles comptables (PCOP 2006)",
-    statut: "à clarifier",
-    contenu: "Le référentiel PCOP 2006 est utilisé comme cadrage provisoire. PAOMA doit confirmer si PCOP 2006, PCG ou un référentiel hybride s'applique, et fournir les schémas débit/crédit par opération."
+    title: "Règles comptables et PCOP 2006",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le logiciel devra produire ou préparer des écritures comptables pour certaines opérations : caisse, versements, rapatriements, créances, placements, paiements, rapprochements, valeurs postales et régularisations.",
+      "Proposition KCI : utiliser le PCOP 2006 comme référentiel provisoire de comptabilité publique, avec une architecture configurable : comptes, journaux, écritures, lignes débit/crédit, périodes, contrepassations et validations.",
+      "Attente PAOSITRA : confirmer le référentiel applicable, fournir le plan de comptes, les journaux comptables, les schémas d'écriture par opération et les règles de correction.",
+      "Risque si non confirmé : le logiciel peut afficher les écrans, mais ne doit pas générer d'écritures comptables définitives."
+    ]
   },
   {
     num: 7,
     title: "Transactions financières postales",
-    statut: "à clarifier",
-    contenu: "Montants maximum autorisés (numéraire, VP, ME), devises acceptées, limites par guichet et règles de billetage doivent être fournis par PAOMA."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Les transactions financières postales concernent les opérations d'argent ou de valeurs réalisées dans les agences : espèces, valeurs postales, monnaie électronique, mandats, paiements, versements, rapatriements, avances et régularisations.",
+      "Termes à confirmer dans l'écran : numéraire, valeurs postales, monnaie électronique, billetage et plafond.",
+      "Proposition KCI : prévoir des plafonds paramétrables par agence, caisse, type d'opération et profil utilisateur.",
+      "Attente PAOSITRA : fournir les plafonds, devises acceptées, règles de billetage, limites par guichet, règles de contrôle et seuils d'alerte.",
+      "Risque si non confirmé : la caisse peut être démontrée, mais pas utilisée en production avec des montants réels."
+    ]
   },
   {
     num: 8,
-    title: "Interopérabilité Lot 1 / Lot 2",
-    statut: "à clarifier",
-    contenu: "Les flux entre Lot 1 (trésorerie) et Lot 2 (opérations agences) — virements, AC, rapatriements — nécessitent une définition contractuelle des interfaces."
+    title: "Relations entre Lot 1 Trésorerie et Lot 2 Opérations",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO distingue deux lots. KCI propose un socle technique commun pour la sécurité, les utilisateurs, l'audit, les sauvegardes et les API, mais les métiers restent séparés.",
+      "Le Lot 2 produit les opérations terrain : caisse, agence, guichets, versements, rapatriements, demandes de valeurs et accusés de crédit. Le Lot 1 suit les impacts financiers centraux : trésorerie, comptes, créances, placements, rapprochements, paiements et budget.",
+      "Proposition KCI : prévoir des interfaces internes entre les deux lots, sans figer les flux tant que PAOSITRA ne confirme pas les règles.",
+      "Attente PAOSITRA : indiquer quels flux passent du Lot 2 vers le Lot 1, à quel moment, avec quels documents, validations et formats.",
+      "Risque si non confirmé : les rapprochements entre opérations terrain et trésorerie centrale resteront incomplets."
+    ]
   },
   {
     num: 9,
-    title: "Gestion des incidents et audit",
+    title: "Incidents et piste d'audit",
     statut: "partiel",
-    contenu: "La piste d'audit est implémentée (trigger-protected). Les règles de conservation, accès et export des journaux d'audit doivent être validées par PAOMA."
+    contenu: [
+      "La piste d'audit garde la trace des actions importantes : connexion, échec de connexion, création, modification, validation, annulation, export, refus d'accès et changement de rôle.",
+      "La protection au niveau de la base signifie que les événements d'audit ne peuvent pas être modifiés ou supprimés par le compte applicatif normal.",
+      "Proposition KCI : conserver l'audit applicatif au moins 10 ans pour les actions métier sensibles, conserver les journaux techniques 12 mois, chiffrer les sauvegardes et limiter l'accès aux auditeurs autorisés.",
+      "Attente PAOSITRA : valider les durées de conservation, les profils autorisés, les formats d'export et les procédures d'archivage.",
+      "Risque si non confirmé : les traces existent, mais leur valeur administrative et leur durée de conservation ne seront pas officiellement cadrées."
+    ]
   },
   {
     num: 10,
-    title: "Processus de clôture d'agence",
+    title: "Clôture d'agence",
     statut: "partiel",
-    contenu: "La fermeture technique est implémentée. Le processus métier (transfert de valeurs, rapatriement, soldes, G59/G60, archivage) doit être fourni par PAOMA."
+    contenu: [
+      "La clôture d'agence signifie l'arrêt ou la fermeture opérationnelle d'une agence, temporaire ou définitive. Elle ne se limite pas à désactiver l'agence dans le logiciel.",
+      "Proposition KCI : demande de fermeture > inventaire des caisses et valeurs > contrôle des soldes > transfert ou rapatriement > téléversement des pièces > validation > archivage.",
+      "Attente PAOSITRA : fournir les modèles G59/G60, les documents obligatoires, les validateurs, les règles de transfert et les règles d'archivage.",
+      "Risque si non confirmé : on peut désactiver techniquement une agence, mais pas sécuriser sa fermeture administrative et financière."
+    ]
   },
   {
     num: 11,
-    title: "Reporting réglementaire",
-    statut: "démo front",
-    contenu: "Parcours représenté en démonstration front. Les modèles de rapports officiels, formats, fréquences, destinataires et règles G59/G60 restent à valider par PAOMA."
+    title: "Modèles de rapports et documents",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO demande des rapports, exports, tickets, accusés de crédit, situations et documents de suivi. Les modèles officiels ne sont pas fournis.",
+      "Proposition KCI : créer des modèles provisoires clairement marqués démonstration non contractuelle, avec export PDF, Excel ou CSV.",
+      "Attente PAOSITRA : fournir les modèles officiels : en-têtes, signatures, champs obligatoires, numérotation, mentions légales, formats d'impression et règles de validation.",
+      "Risque si non confirmé : les exports peuvent servir à la démonstration, mais ne doivent pas être utilisés comme documents officiels."
+    ]
   },
   {
     num: 12,
-    title: "Intégration systèmes externes",
-    statut: "démo front",
-    contenu: "Parcours représenté en démonstration front. Les intégrations BCM, banques, CCP et paiement mobile nécessitent des contrats d'interface validés par PAOMA."
+    title: "Intégration avec systèmes externes",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Une intégration externe signifie que le logiciel échange des données avec un autre système : banque, CCP, mobile money, BCM, plateforme interne, email, application partenaire ou système existant.",
+      "Un contrat d'échange de données décrit le format, les colonnes obligatoires, les identifiants, les règles d'erreur, les accusés de réception, la sécurité, la fréquence et les responsabilités.",
+      "Proposition KCI : prévoir des API et imports configurables, sans connecter réellement un système externe tant que les contrats d'échange ne sont pas validés.",
+      "Attente PAOSITRA : fournir les formats BCM, banques, CCP, paiement mobile, CPS, email ou autres systèmes partenaires.",
+      "Risque si non confirmé : les écrans peuvent être démontrés, mais les échanges automatiques avec les systèmes externes ne peuvent pas être fiabilisés."
+    ]
   },
   {
     num: 13,
     title: "Protection des données personnelles",
-    statut: "à clarifier",
-    contenu: "La législation applicable à Madagascar (loi n°2014-038 sur la protection des données) et les règles de conservation, accès et suppression doivent être intégrées."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le logiciel peut traiter des données personnelles : agents, utilisateurs, clients, bénéficiaires, pièces d'identité, contacts, opérations, traces de connexion et justificatifs.",
+      "Ces données doivent être protégées selon la législation applicable à Madagascar, notamment la loi n°2014-038 sur la protection des données personnelles, ainsi que les règles internes PAOSITRA.",
+      "Proposition KCI : prévoir des droits d'accès stricts, le masquage de certaines données sensibles, la journalisation des consultations, la limitation des exports, une conservation paramétrable et l'anonymisation selon règles validées.",
+      "Attente PAOSITRA : confirmer les données personnelles traitées, durées de conservation, profils autorisés, règles d'export et procédures de suppression ou d'archivage.",
+      "Risque si non confirmé : le logiciel pourrait être techniquement fonctionnel, mais non conforme aux obligations de protection des données."
+    ]
   }
 ];
 
@@ -796,13 +900,13 @@ function PointsAClarifier({ lot }: { lot: "lot1" | "lot2" }) {
 
   return (
     <section className="panel">
-      <h2>Parcours à cadrer avec PAOMA</h2>
+      <h2>Parcours à cadrer avec PAOSITRA</h2>
       <p className="muted">
         Ces parcours représentent les fonctions à cadrer issues de l'analyse du DAO {lot === "lot1" ? "Lot 1 (Trésorerie)" : "Lot 2 (Opérations)"}.
-        Ils restent à valider formellement par PAOMA avant activation comme règles définitives.
+        Ils restent à valider formellement par PAOSITRA avant activation comme règles définitives.
       </p>
       <Message type="info">
-        Le DAO reste la référence contractuelle. Ces parcours de démonstration ne remplacent pas les règles définitives PAOMA.
+        Le DAOO n°26/005-PAOSITRA/DG/PRMP/AOO reste la référence prioritaire. Ces parcours de démonstration ne remplacent pas les règles définitives PAOSITRA.
       </Message>
       {clarificationSections.map((section) => (
         <div className="clarify-section" key={section.num}>
@@ -820,7 +924,9 @@ function PointsAClarifier({ lot }: { lot: "lot1" | "lot2" }) {
           </div>
           {open === section.num && (
             <div className="clarify-section-body">
-              <p>{section.contenu}</p>
+              {section.contenu.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           )}
         </div>

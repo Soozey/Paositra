@@ -113,6 +113,10 @@ describe("Treasury application shell", () => {
     renderApp();
 
     expect(
+      await screen.findByRole("heading", { name: "Parcours conseillé" })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Placements" }));
+    expect(
       await screen.findByRole("heading", { name: "Placements enregistrés" })
     ).toBeInTheDocument();
     expect(

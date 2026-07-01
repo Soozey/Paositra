@@ -58,6 +58,33 @@ export class OperationsController {
     res.send(csv);
   }
 
+  @Get("agencies/export.xlsx")
+  @RequirePermission("operations:agencies:export")
+  async exportAgenciesXlsx(@Res() res: Response) {
+    const workbook = await this.operations.exportAgenciesXlsx();
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="referentiel-agences-${new Date().toISOString().slice(0, 10)}.xlsx"`
+    );
+    res.end(workbook);
+  }
+
+  @Get("agencies/export.pdf")
+  @RequirePermission("operations:agencies:export")
+  async exportAgenciesPdf(@Res() res: Response) {
+    const pdf = await this.operations.exportAgenciesPdf();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="referentiel-agences-${new Date().toISOString().slice(0, 10)}.pdf"`
+    );
+    res.end(pdf);
+  }
+
   @Post("agencies")
   @RequirePermission("operations:agencies:write")
   @UseInterceptors(IdempotencyInterceptor)

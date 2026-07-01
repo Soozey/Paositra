@@ -15,6 +15,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { randomUUID } from "node:crypto";
 import { Brackets, DataSource, Repository } from "typeorm";
 import { paginated } from "../common/pagination.dto";
+import { buildPdf, buildXlsx } from "../common/exporters";
 import type { AuthenticatedUser } from "../common/request-context";
 import { Agency } from "../database/entities";
 import { AuditService } from "../platform/audit.service";
@@ -95,6 +96,52 @@ export class OperationsService {
       ].join(",")
     );
     return [header, ...rows].join("\n");
+  }
+
+  async exportAgenciesXlsx(): Promise<Buffer> {
+    const agencies = await this.agencies.find({ order: { name: "ASC" } });
+    const rows = agencies.map((a) => ({
+      code: a.code,
+      codique: a.codique ?? "",
+      name: a.name,
+      type: a.type ?? "",
+      region: a.region ?? "",
+      district: a.district ?? "",
+      city: a.city ?? "",
+      status: a.status,
+      sourceType: a.sourceType,
+      validationStatus: a.validationStatus
+    }));
+    return buildXlsx("Referentiel agences", [
+      { header: "Code", key: "code", width: 18 },
+      { header: "Codique", key: "codique", width: 18 },
+      { header: "Agence", key: "name", width: 34 },
+      { header: "Type", key: "type", width: 22 },
+      { header: "Région", key: "region", width: 20 },
+      { header: "District", key: "district", width: 22 },
+      { header: "Ville", key: "city", width: 20 },
+      { header: "État", key: "status", width: 14 },
+      { header: "Source", key: "sourceType", width: 22 },
+      { header: "Validation", key: "validationStatus", width: 18 }
+    ], rows, "[DÉMONSTRATION] Référentiel agences — non contractuel — à valider PAOSITRA");
+  }
+
+  async exportAgenciesPdf(): Promise<Buffer> {
+    const agencies = await this.agencies.find({ order: { name: "ASC" } });
+    const lines = agencies.map((a) => [
+      a.code,
+      a.codique ?? "",
+      a.name,
+      a.type ?? "",
+      a.region ?? "",
+      a.validationStatus
+    ]);
+    return buildPdf(
+      "Référentiel agences",
+      "[DÉMONSTRATION] PAOSITRA — données non contractuelles — format A4",
+      lines,
+      ["Code", "Codique", "Agence", "Type", "Région", "Validation"]
+    );
   }
 
   async importAgencies(

@@ -12,7 +12,16 @@ interface OpsKpi {
   detailNonCloturees: { agency: string; reg: string; date: string }[];
 }
 interface ValueReq { id: string; reference: string; valueType: string; amount: string; status: string; version: number; fromAgency: string; toAgency: string }
-interface Notif { id: string; type: string; message: string; isRead: boolean; createdAt: string; isVirtual?: boolean }
+interface Notif {
+  id: string;
+  type: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  objectType?: string | null;
+  objectId?: string | null;
+  isVirtual?: boolean;
+}
 
 const VRSTATUS: Record<string, string> = { demande: "Demande", notifiee: "Notifiée", traitee: "Traitée", rejetee: "Rejetée" };
 
@@ -148,6 +157,9 @@ export function AlertsPanel() {
   const auth = useAuth();
   const [data, setData] = useState<{ unread: number; items: Notif[] }>({ unread: 0, items: [] });
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
+  const [filter, setFilter] = useState({ search: "", status: "" });
+  const [sort, setSort] = useState<"date_desc" | "date_asc" | "type_asc">("date_desc");
+  const [selected, setSelected] = useState<Notif | null>(null);
   const load = useCallback(async () => {
     try { setData(await apiRequest<{ unread: number; items: Notif[] }>("/api/v1/platform/notifications", { token: auth.token })); }
     catch (e) { setMsg({ type: "error", text: e instanceof Error ? e.message : "Erreur." }); }
@@ -157,20 +169,91 @@ export function AlertsPanel() {
     try { await apiRequest(`/api/v1/platform/notifications/${id}/read`, { method: "POST", token: auth.token, idempotent: true, body: "{}" }); await load(); }
     catch (e) { setMsg({ type: "error", text: e instanceof Error ? e.message : "Erreur." }); }
   }
+  const rows = data.items
+    .filter((alert) => {
+      const search = filter.search.trim().toLowerCase();
+      if (filter.status === "unread" && alert.isRead) return false;
+      if (filter.status === "read" && !alert.isRead) return false;
+      if (!search) return true;
+      return [alert.type, alert.message, alert.objectType ?? ""].some((value) => value.toLowerCase().includes(search));
+    })
+    .sort((a, b) => {
+      if (sort === "date_asc") return a.createdAt.localeCompare(b.createdAt);
+      if (sort === "type_asc") return a.type.localeCompare(b.type);
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  const moduleLabel = (alert: Notif) => {
+    if (alert.objectType?.startsWith("operations.")) return "Opérations";
+    if (alert.objectType?.startsWith("treasury.")) return "Trésorerie";
+    if (alert.type.includes("connexion") || alert.type.includes("acces")) return "Sécurité";
+    return "Plateforme";
+  };
+  const severityLabel = (alert: Notif) =>
+    alert.type.includes("ecart") || alert.type.includes("refus") || alert.type.includes("echec")
+      ? "Haute"
+      : alert.type.includes("validation") || alert.type.includes("caisse")
+        ? "Moyenne"
+        : "Information";
   return (
     <section className="panel">
       {msg && <Message type={msg.type}>{msg.text}</Message>}
       <h2>Alertes {data.unread > 0 && <span className="alerts-badge">{data.unread}</span>}</h2>
-      {data.items.length === 0 ? <p className="empty">Aucune alerte.</p> : (
-        <div className="table-wrap"><table>
-          <thead><tr><th>Type</th><th>Message</th><th>Date</th><th></th></tr></thead>
-          <tbody>{data.items.map((n) => (
-            <tr key={n.id} className={n.isRead ? "" : "unread"}>
-              <td>{n.type}</td><td>{n.message}</td><td>{new Date(n.createdAt).toLocaleString("fr-FR")}</td>
-              <td>{!n.isRead && !n.isVirtual && <button className="link" onClick={() => void markRead(n.id)}>Marquer lu</button>}</td>
+      <p className="muted">Alertes consultables selon le périmètre du compte connecté. Les alertes calculées pour la démonstration sont indiquées comme non contractuelles.</p>
+      <div className="filter-bar">
+        <label>Recherche
+          <input value={filter.search} onChange={(e) => setFilter({ ...filter, search: e.target.value })} placeholder="Type, message, module" />
+        </label>
+        <label>Statut
+          <select value={filter.status} onChange={(e) => setFilter({ ...filter, status: e.target.value })}>
+            <option value="">Tous</option>
+            <option value="unread">À traiter</option>
+            <option value="read">Consultée</option>
+          </select>
+        </label>
+        <label>Tri
+          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+            <option value="date_desc">Plus récentes</option>
+            <option value="date_asc">Plus anciennes</option>
+            <option value="type_asc">Type</option>
+          </select>
+        </label>
+        <button className="secondary" type="button" onClick={() => { setFilter({ search: "", status: "" }); setSort("date_desc"); }}>
+          Réinitialiser filtres
+        </button>
+      </div>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Type</th><th>Gravité</th><th>Module</th><th>Agence</th><th>Utilisateur concerné</th><th>Statut</th><th>Action recommandée</th><th>Source</th><th>Démo</th><th>Action</th></tr></thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={11} className="empty">Aucune alerte ne correspond au périmètre et aux filtres actuels. Le gabarit est prêt pour recevoir les alertes officielles ou les alertes de démonstration autorisées.</td>
             </tr>
-          ))}</tbody>
-        </table></div>
+          ) : rows.map((n) => (
+            <tr key={n.id} className={n.isRead ? "" : "unread"}>
+              <td>{new Date(n.createdAt).toLocaleString("fr-FR")}</td>
+              <td>{n.type}</td>
+              <td>{severityLabel(n)}</td>
+              <td>{moduleLabel(n)}</td>
+              <td>Non renseigné</td>
+              <td>Selon périmètre</td>
+              <td>{n.isRead ? "Consultée" : "À traiter"}</td>
+              <td>{n.isRead ? "Aucune action immédiate" : "Consulter puis traiter selon procédure validée"}</td>
+              <td>{n.isVirtual ? "Calcul démonstration" : "Piste applicative"}</td>
+              <td>{n.isVirtual ? "DEMO" : "—"}</td>
+              <td>
+                <div className="actions">
+                  <button className="link" type="button" onClick={() => setSelected(n)}>Consulter alerte</button>
+                  {!n.isRead && !n.isVirtual && <button className="link" type="button" onClick={() => void markRead(n.id)}>Marquer lu</button>}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div>
+      {selected && (
+        <Message type="info">
+          {selected.message}
+        </Message>
       )}
     </section>
   );

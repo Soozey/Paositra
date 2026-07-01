@@ -137,10 +137,13 @@ const USER_SPECS = [
     usage: "Administration technique demo",
     permissions: unique([
       ...PERMISSIONS.platformAdmin,
-      ...PERMISSIONS.treasuryRead,
-      ...PERMISSIONS.treasuryManage,
-      ...PERMISSIONS.operationsRead,
-      ...PERMISSIONS.operationsManage
+      "operations:agencies:read",
+      "operations:agencies:write",
+      "operations:agencies:import",
+      "operations:agencies:export",
+      "operations:counters:read",
+      "operations:counters:manage",
+      "platform:notifications:read"
     ])
   },
   {
@@ -370,7 +373,8 @@ const FIXED_PASSWORDS = {
   "demo.admin@paositra.local": "Demo-PAO-2026-WMS7!",
   "demo.tresorerie@paositra.local": "Demo-PAO-2026-Z9TK!",
   "demo.operations@paositra.local": "Demo-PAO-2026-JYCU!",
-  "demo.dg@paositra.local": "Demo-PAO-2026-GMU5!"
+  "demo.dg@paositra.local": "Demo-PAO-2026-GMU5!",
+  "demo.audit@paositra.local": "Demo-PAO-2026-P8P9!"
 };
 
 function password() {

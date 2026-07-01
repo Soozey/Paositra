@@ -6,7 +6,7 @@ import { RequirePermission } from "../platform/rbac";
 import { requestMetadata } from "../common/request-context";
 import type { AuthenticatedRequest } from "../common/request-context";
 import { AuditService } from "../platform/audit.service";
-import { buildPdf } from "../common/exporters";
+import { buildPdf, buildXlsx } from "../common/exporters";
 
 @ApiTags("Trésorerie — Tableau de bord")
 @ApiBearerAuth()
@@ -62,6 +62,39 @@ export class TreasuryDashboardController {
       action: "treasury.dashboard.export.pdf", objectType: "treasury.dashboard", ...requestMetadata(req) });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="tableau-bord-tresorerie-DEMO.pdf"');
+    res.end(buf);
+  }
+
+  @Get("dashboard.xlsx")
+  @RequirePermission("treasury:dashboard:read")
+  async dashboardXlsx(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const k = await this.kpis();
+    const rows = [
+      { indicator: "Placements actifs", value: k.placementsActifs, unit: "" },
+      { indicator: "Montant placé", value: k.montantPlace, unit: "MGA" },
+      { indicator: "Créances en retard", value: k.creancesEnRetard, unit: "" },
+      { indicator: "Montant des créances en retard", value: k.montantCreancesRetard, unit: "MGA" },
+      { indicator: "Dossiers d'engagement en attente", value: k.engagementsEnAttente, unit: "" },
+      { indicator: "Budget ouvert", value: k.budgetOuvert, unit: "MGA" },
+      { indicator: "Budget engagé", value: k.budgetEngage, unit: "MGA" },
+      { indicator: "Taux d'exécution budgétaire", value: k.tauxExecutionPct, unit: "%" },
+      { indicator: "Comptes courants actifs", value: k.comptesActifs, unit: "" },
+      { indicator: "Chèques en circulation", value: k.chequesEnCirculation, unit: "" }
+    ];
+    const buf = await buildXlsx("Tableau de bord", [
+      { header: "Indicateur", key: "indicator", width: 38 },
+      { header: "Valeur", key: "value", width: 18 },
+      { header: "Unité", key: "unit", width: 12 }
+    ], rows, "[DÉMONSTRATION] Tableau de bord Trésorerie — non contractuel");
+    await this.audit.record(this.ds.manager, {
+      actorUserId: req.user!.id,
+      sessionId: req.user!.sessionId,
+      action: "treasury.dashboard.export.xlsx",
+      objectType: "treasury.dashboard",
+      ...requestMetadata(req)
+    });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="tableau-bord-tresorerie-DEMO.xlsx"');
     res.end(buf);
   }
 }

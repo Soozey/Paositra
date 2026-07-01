@@ -22,9 +22,19 @@ const PERMS = {
   operations: ["operations:agencies:read","operations:agencies:write","operations:agencies:validate","operations:agencies:export","operations:agencies:import","operations:agencies:close","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:transfers:manage","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:cash:open","operations:cash:operate","operations:cash:close","operations:day:validate","operations:verification:read","operations:verification:validate","operations:fund:manage"]
 };
 const ALL = [...PERMS.platform, ...PERMS.treasury, ...PERMS.operations];
+const SYSTEM_ADMIN_PERMISSIONS = [
+  ...PERMS.platform,
+  "operations:agencies:read",
+  "operations:agencies:write",
+  "operations:agencies:export",
+  "operations:agencies:import",
+  "operations:counters:read",
+  "operations:counters:manage",
+  "platform:notifications:read"
+];
 
 const ROLE_PERMS = {
-  ADMIN_SYSTEME: ALL,
+  ADMIN_SYSTEME: SYSTEM_ADMIN_PERMISSIONS,
   DIRECTEUR_FINANCIER: ["treasury:institutions:read","treasury:institutions:validate","treasury:placements:read","treasury:placements:approve","treasury:placements:export","treasury:accounts:read","treasury:flows:read","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:export","treasury:budget:read","treasury:budget:validate","platform:dashboard:read","platform:audit:read"],
   TRESORIER_CHEF: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export","treasury:budget:read","treasury:budget:manage","treasury:budget:validate"],
   COMPTABLE: ["treasury:institutions:read","treasury:placements:read","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:budget:read"],
