@@ -1,10 +1,12 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { downloadFile, fmt } from "./util";
+import { AttachmentsPanel } from "./AttachmentsPanel";
 
 interface Exercise { id: string; year: number; label: string; status: string }
 interface Line { id: string; direction: string; program: string; accountCode: string; label: string; allocated: string; engaged: string; available: string }
 interface Engagement { id: string; reference: string; object: string; marketType: string; amount: string; status: string; version: number; lineLabel: string; direction: string }
+interface BudgetVersion { id: string; versionNumber: number; label: string; status: string; justification: string | null; version: number }
 
 const ESTATUS: Record<string, string> = { brouillon: "Brouillon", soumis: "Soumis", en_verification: "En vérification", valide: "Validé", rejete: "Rejeté", paye: "Payé", archive: "Archivé" };
 const NEXT: Record<string, { action: string; label: string; perm: string; danger?: boolean }[]> = {
@@ -21,9 +23,13 @@ export function BudgetModule() {
   const [exId, setExId] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [engs, setEngs] = useState<Engagement[]>([]);
+  const [versions, setVersions] = useState<BudgetVersion[]>([]);
+  const [versionId, setVersionId] = useState("");
+  const [attachmentEngagement, setAttachmentEngagement] = useState<Engagement | null>(null);
   const [exForm, setExForm] = useState({ year: new Date().getFullYear(), label: "" });
   const [lineForm, setLineForm] = useState({ direction: "", program: "", accountCode: "", label: "", allocatedAmount: "" });
   const [engForm, setEngForm] = useState({ lineId: "", object: "", marketType: "bon_de_commande", amount: "" });
+  const [versionForm, setVersionForm] = useState({ label: "", sourceVersionId: "", justification: "" });
   const [msg, setMsg] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const canManage = auth.hasPermission("treasury:budget:manage");
@@ -36,13 +42,18 @@ export function BudgetModule() {
   const loadDetail = useCallback(async () => {
     if (!exId) { setLines([]); setEngs([]); return; }
     try {
-      const [l, e] = await Promise.all([
-        apiRequest<{ items: Line[] }>(`/api/v1/treasury/budget/lines?exerciseId=${exId}`, { token: auth.token }),
+      const [l, e, v] = await Promise.all([
+        apiRequest<{ items: Line[] }>(`/api/v1/treasury/budget/lines?exerciseId=${exId}${versionId ? `&versionId=${versionId}` : ""}`, { token: auth.token }),
         apiRequest<{ items: Engagement[] }>("/api/v1/treasury/engagements", { token: auth.token })
+        ,apiRequest<{ items: BudgetVersion[] }>(`/api/v1/treasury/budget/versions?exerciseId=${exId}`, { token: auth.token })
       ]);
-      setLines(l.items); setEngs(e.items);
+      setLines(l.items); setEngs(e.items); setVersions(v.items);
+      if (!versionId) {
+        const activeVersion = v.items.find((item) => item.status === "active") ?? v.items[0];
+        if (activeVersion) setVersionId(activeVersion.id);
+      }
     } catch (err) { setMsg({ type: "error", text: err instanceof Error ? err.message : "Erreur." }); }
-  }, [auth.token, exId]);
+  }, [auth.token, exId, versionId]);
   useEffect(() => { void loadEx(); }, [loadEx]);
   useEffect(() => { void loadDetail(); }, [loadDetail]);
 
@@ -54,9 +65,21 @@ export function BudgetModule() {
   }
   async function createLine(e: FormEvent) {
     e.preventDefault(); if (!exId) return; setLoading(true);
-    try { await apiRequest("/api/v1/treasury/budget/lines", { method: "POST", token: auth.token, idempotent: true, body: JSON.stringify({ ...lineForm, exerciseId: exId }) });
+    try { await apiRequest("/api/v1/treasury/budget/lines", { method: "POST", token: auth.token, idempotent: true, body: JSON.stringify({ ...lineForm, exerciseId: exId, budgetVersionId: versionId || undefined }) });
       setMsg({ type: "success", text: "Ligne de crédit créée." }); setLineForm({ direction: "", program: "", accountCode: "", label: "", allocatedAmount: "" }); await loadDetail();
     } catch (err) { setMsg({ type: "error", text: err instanceof Error ? err.message : "Erreur." }); } finally { setLoading(false); }
+  }
+  async function createVersion(e: FormEvent) {
+    e.preventDefault(); if (!exId) return; setLoading(true);
+    try { const result = await apiRequest<{ id: string; versionNumber: number }>("/api/v1/treasury/budget/versions", { method: "POST", token: auth.token, idempotent: true,
+      body: JSON.stringify({ exerciseId: exId, ...versionForm, sourceVersionId: versionForm.sourceVersionId || undefined, justification: versionForm.justification || undefined }) });
+      setVersionId(result.id); setVersionForm({ label: "", sourceVersionId: "", justification: "" }); setMsg({ type: "success", text: `Version ${result.versionNumber} créée en brouillon.` }); await loadDetail();
+    } catch (error) { setMsg({ type: "error", text: error instanceof Error ? error.message : "Création impossible." }); } finally { setLoading(false); }
+  }
+  async function activateVersion(version: BudgetVersion) {
+    try { await apiRequest(`/api/v1/treasury/budget/versions/${version.id}/activate`, { method: "POST", token: auth.token, idempotent: true,
+      body: JSON.stringify({ version: version.version, comment: "Activation depuis l'interface" }) }); setMsg({ type: "success", text: `Version ${version.versionNumber} activée.` }); await loadDetail(); }
+    catch (error) { setMsg({ type: "error", text: error instanceof Error ? error.message : "Activation impossible." }); }
   }
   async function createEng(e: FormEvent) {
     e.preventDefault(); setLoading(true);
@@ -93,6 +116,19 @@ export function BudgetModule() {
             <button className="primary" disabled={loading} type="submit">Créer l'exercice</button>
           </form>
         )}
+      </section>
+      <section className="panel wide-panel">
+        <div className="panel-head"><div><h2>Versions budgétaires</h2><p className="muted">Une seule version active par exercice. Les versions précédentes sont conservées et archivées.</p></div>
+          <select value={versionId} onChange={(e) => setVersionId(e.target.value)}><option value="">Lignes historiques sans version</option>{versions.map((version) => <option key={version.id} value={version.id}>V{version.versionNumber} — {version.label} ({version.status})</option>)}</select></div>
+        {canManage && exId && <form className="inline-form" onSubmit={createVersion}>
+          <input required placeholder="Libellé de la version" value={versionForm.label} onChange={(e) => setVersionForm({ ...versionForm, label: e.target.value })} />
+          <select value={versionForm.sourceVersionId} onChange={(e) => setVersionForm({ ...versionForm, sourceVersionId: e.target.value })}><option value="">Version vide</option>{versions.map((version) => <option key={version.id} value={version.id}>Copier V{version.versionNumber}</option>)}</select>
+          <input placeholder="Justification" value={versionForm.justification} onChange={(e) => setVersionForm({ ...versionForm, justification: e.target.value })} />
+          <button className="primary" disabled={loading}>Créer la version</button>
+        </form>}
+        <div className="table-wrap"><table><thead><tr><th>Version</th><th>Libellé</th><th>Statut</th><th>Justification</th><th>Actions</th></tr></thead>
+          <tbody>{versions.length === 0 ? <tr><td colSpan={5} className="empty">Aucune version budgétaire. Créez une première version pour préparer le budget.</td></tr> : versions.map((version) => <tr key={version.id}><td>V{version.versionNumber}</td><td>{version.label}</td><td>{version.status}</td><td>{version.justification || "-"}</td>
+            <td>{version.status === "brouillon" && auth.hasPermission("treasury:budget:validate") && <button className="primary" onClick={() => void activateVersion(version)}>Activer</button>}</td></tr>)}</tbody></table></div>
       </section>
       <section className="panel">
         <h2>Lignes de crédit (ouvert / engagé / disponible)</h2>
@@ -134,10 +170,12 @@ export function BudgetModule() {
             ) : engs.map((en) => (
               <tr key={en.id}><td>{en.reference}</td><td>{en.object}</td><td>{en.lineLabel}</td><td>{fmt(en.amount)}</td><td>{ESTATUS[en.status] ?? en.status}</td>
                 <td><div className="actions">{(NEXT[en.status] ?? []).filter((a) => auth.hasPermission(a.perm)).map((a) =>
-                  <button key={a.action} className={a.danger ? "danger" : "secondary"} onClick={() => void transition(en, a.action)}>{a.label}</button>)}</div></td>
+                  <button key={a.action} className={a.danger ? "danger" : "secondary"} onClick={() => void transition(en, a.action)}>{a.label}</button>)}
+                  {auth.hasPermission("treasury:attachments:read") && <button className="secondary" onClick={() => setAttachmentEngagement(en)}>Pièces</button>}</div></td>
               </tr>
             ))}</tbody>
           </table></div>
+        {attachmentEngagement && <AttachmentsPanel objectType="engagement" objectId={attachmentEngagement.id} title={`Pièces du dossier ${attachmentEngagement.reference}`} />}
       </section>
     </div>
   );

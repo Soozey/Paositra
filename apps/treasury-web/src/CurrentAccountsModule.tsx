@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { AmountInput, apiRequest, Message, useAuth } from "@paositra/web-core";
 import { downloadFile, fmt } from "./util";
+import { TreasuryExtensionsModule } from "./TreasuryExtensionsModule";
 
 interface Account { id: string; label: string; bank: string; accountNumber: string; currency: string; openingBalance: string; status: string; version: number; balance: string }
 interface Entry { id: string; entryDate: string; direction: string; amount: string; pieceReference: string | null; label: string; reconciled: boolean }
@@ -169,6 +170,7 @@ export function CurrentAccountsModule() {
               </tr>))}</tbody>
           </table></div>
       </section>
+      <TreasuryExtensionsModule accounts={accounts.map(({ id, label }) => ({ id, label }))} />
     </div>
   );
 }

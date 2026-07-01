@@ -1,6 +1,6 @@
 import {
   Body, ConflictException, Controller, Get, NotFoundException,
-  Param, ParseUUIDPipe, Post, Query, Req, Res
+  Param, ParseUUIDPipe, Post, Query, Req, Res, UseInterceptors
 } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { randomUUID } from "node:crypto";
@@ -13,17 +13,25 @@ import { requestMetadata } from "../common/request-context";
 import type { AuthenticatedRequest } from "../common/request-context";
 import { AuditService } from "../platform/audit.service";
 import { buildXlsx, buildPdf } from "../common/exporters";
+import { IdempotencyInterceptor } from "../platform/idempotency.interceptor";
 
 const ENGAGED = ['soumis','en_verification','valide','paye','archive'];
 
 export class CreateExerciseDto { @Type(()=>Number) @IsInt() @Min(2000) year!: number; @IsString() @MinLength(2) @MaxLength(160) label!: string; }
 export class CreateLineDto {
   @IsString() exerciseId!: string;
+  @IsOptional() @IsString() budgetVersionId?: string;
   @IsString() @MinLength(2) @MaxLength(160) direction!: string;
   @IsString() @MinLength(1) @MaxLength(160) program!: string;
   @IsString() @MinLength(1) @MaxLength(40) accountCode!: string;
   @IsString() @MinLength(2) @MaxLength(240) label!: string;
   @IsNumberString() allocatedAmount!: string;
+}
+export class CreateBudgetVersionDto {
+  @IsString() exerciseId!: string;
+  @IsString() @MinLength(2) @MaxLength(160) label!: string;
+  @IsOptional() @IsString() sourceVersionId?: string;
+  @IsOptional() @IsString() @MaxLength(1000) justification?: string;
 }
 export class CreateEngagementDto {
   @IsString() lineId!: string;
@@ -58,11 +66,66 @@ export class BudgetController {
     return { id };
   }
 
+  @Get("budget/versions")
+  @RequirePermission("treasury:budget:read")
+  async versions(@Query("exerciseId") exerciseId?: string) {
+    if (!exerciseId) return { items: [] };
+    return { items: await this.ds.query(`SELECT id,version_number AS "versionNumber",label,status,justification,
+      created_at AS "createdAt",activated_at AS "activatedAt",version
+      FROM treasury.budget_versions WHERE exercise_id=$1 ORDER BY version_number DESC`, [exerciseId]) };
+  }
+
+  @Post("budget/versions")
+  @RequirePermission("treasury:budget:manage")
+  @UseInterceptors(IdempotencyInterceptor)
+  async createVersion(@Body() dto: CreateBudgetVersionDto, @Req() req: AuthenticatedRequest) {
+    return this.ds.transaction(async (m) => {
+      const exercise = await m.query("SELECT status FROM treasury.budget_exercises WHERE id=$1 FOR UPDATE", [dto.exerciseId]);
+      if (!exercise.length || exercise[0].status !== "ouvert") throw new NotFoundException("Exercice budgetaire ouvert introuvable.");
+      if (dto.sourceVersionId) {
+        const source = await m.query("SELECT 1 FROM treasury.budget_versions WHERE id=$1 AND exercise_id=$2", [dto.sourceVersionId, dto.exerciseId]);
+        if (!source.length) throw new NotFoundException("Version source introuvable pour cet exercice.");
+      }
+      const numberRows = await m.query("SELECT COALESCE(max(version_number),0)+1 AS n FROM treasury.budget_versions WHERE exercise_id=$1", [dto.exerciseId]);
+      const id = randomUUID(); const versionNumber = Number(numberRows[0].n);
+      await m.query(`INSERT INTO treasury.budget_versions(id,exercise_id,version_number,label,justification,created_by)
+        VALUES($1,$2,$3,$4,$5,$6)`, [id, dto.exerciseId, versionNumber, dto.label.trim(), dto.justification?.trim() || null, req.user!.id]);
+      if (dto.sourceVersionId) {
+        await m.query(`INSERT INTO treasury.budget_lines(id,exercise_id,budget_version_id,direction,program,account_code,label,allocated_amount,created_by)
+          SELECT gen_random_uuid(),exercise_id,$1,direction,program,account_code,label,allocated_amount,$2
+          FROM treasury.budget_lines WHERE budget_version_id=$3`, [id, req.user!.id, dto.sourceVersionId]);
+      }
+      await this.audit.record(m, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
+        action: "treasury.budget.version.created", objectType: "treasury.budget_version", objectId: id,
+        afterState: { exerciseId: dto.exerciseId, versionNumber, sourceVersionId: dto.sourceVersionId ?? null }, ...requestMetadata(req) });
+      return { id, versionNumber, status: "brouillon" };
+    });
+  }
+
+  @Post("budget/versions/:id/activate")
+  @RequirePermission("treasury:budget:validate")
+  @UseInterceptors(IdempotencyInterceptor)
+  async activateVersion(@Param("id", ParseUUIDPipe) id: string, @Body() dto: TransitionDto, @Req() req: AuthenticatedRequest) {
+    return this.ds.transaction(async (m) => {
+      const rows = await m.query("SELECT exercise_id,status,version FROM treasury.budget_versions WHERE id=$1 FOR UPDATE", [id]);
+      if (!rows.length) throw new NotFoundException("Version budgetaire introuvable.");
+      if (rows[0].version !== dto.version) throw new ConflictException("Cette version a ete modifiee entre-temps.");
+      if (rows[0].status !== "brouillon") throw new ConflictException("Seule une version brouillon peut etre activee.");
+      await m.query("UPDATE treasury.budget_versions SET status='archivee',version=version+1 WHERE exercise_id=$1 AND status='active'", [rows[0].exercise_id]);
+      await m.query("UPDATE treasury.budget_versions SET status='active',activated_by=$1,activated_at=now(),version=version+1 WHERE id=$2", [req.user!.id, id]);
+      await this.audit.record(m, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
+        action: "treasury.budget.version.activated", objectType: "treasury.budget_version", objectId: id,
+        beforeState: { status: "brouillon" }, afterState: { status: "active" }, metadata: { comment: dto.comment ?? null }, ...requestMetadata(req) });
+      return { id, status: "active" };
+    });
+  }
+
   @Get("budget/lines")
   @RequirePermission("treasury:budget:read")
-  async lines(@Query("exerciseId") exerciseId?: string) {
+  async lines(@Query("exerciseId") exerciseId?: string, @Query("versionId") versionId?: string) {
     const params: unknown[] = []; let w = "";
     if (exerciseId) { params.push(exerciseId); w = "WHERE l.exercise_id = $1"; }
+    if (versionId) { params.push(versionId); w += `${w ? " AND" : "WHERE"} l.budget_version_id = $${params.length}`; }
     return { items: await this.ds.query(
       `SELECT l.id, l.direction, l.program, l.account_code AS "accountCode", l.label,
               l.allocated_amount AS "allocated",
@@ -79,9 +142,13 @@ export class BudgetController {
     await this.ds.transaction(async (m) => {
       const ex = await m.query("SELECT 1 FROM treasury.budget_exercises WHERE id=$1 AND status='ouvert'", [dto.exerciseId]);
       if (!ex.length) throw new NotFoundException("Exercice budgétaire ouvert introuvable.");
-      await m.query(`INSERT INTO treasury.budget_lines(id,exercise_id,direction,program,account_code,label,allocated_amount,created_by)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [id, dto.exerciseId, dto.direction.trim(), dto.program.trim(), dto.accountCode.trim(), dto.label.trim(), dto.allocatedAmount, req.user!.id]);
+      if (dto.budgetVersionId) {
+        const version = await m.query("SELECT 1 FROM treasury.budget_versions WHERE id=$1 AND exercise_id=$2 AND status='brouillon'", [dto.budgetVersionId, dto.exerciseId]);
+        if (!version.length) throw new ConflictException("Ajoutez les lignes uniquement dans une version brouillon de cet exercice.");
+      }
+      await m.query(`INSERT INTO treasury.budget_lines(id,exercise_id,budget_version_id,direction,program,account_code,label,allocated_amount,created_by)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [id, dto.exerciseId, dto.budgetVersionId ?? null, dto.direction.trim(), dto.program.trim(), dto.accountCode.trim(), dto.label.trim(), dto.allocatedAmount, req.user!.id]);
       await this.audit.record(m, { actorUserId: req.user!.id, sessionId: req.user!.sessionId,
         action: "treasury.budget.line.created", objectType: "treasury.budget_line", objectId: id,
         afterState: { allocated: dto.allocatedAmount }, ...requestMetadata(req) });

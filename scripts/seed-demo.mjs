@@ -18,7 +18,7 @@ const ADMIN = "00000000-0000-4000-a000-000000000001";
 
 const PERMS = {
   platform: ["platform:users:manage","platform:config:read","platform:config:manage","platform:audit:read","platform:roles:read","platform:roles:manage","platform:dashboard:read","platform:notifications:read","platform:agencies:validate"],
-  treasury: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export","treasury:budget:read","treasury:budget:manage","treasury:budget:validate"],
+  treasury: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export","treasury:budget:read","treasury:budget:manage","treasury:budget:validate","treasury:wallets:read","treasury:wallets:manage","treasury:imports:read","treasury:imports:manage","treasury:attachments:read","treasury:attachments:manage"],
   operations: ["operations:agencies:read","operations:agencies:write","operations:agencies:validate","operations:agencies:export","operations:agencies:import","operations:agencies:close","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:transfers:manage","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:cash:open","operations:cash:operate","operations:cash:close","operations:day:validate","operations:verification:read","operations:verification:validate","operations:fund:manage"]
 };
 const ALL = [...PERMS.platform, ...PERMS.treasury, ...PERMS.operations];
@@ -45,6 +45,12 @@ const ROLE_PERMS = {
   VERIFICATEUR: ["operations:agencies:read","operations:counters:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:verification:read","operations:verification:validate","platform:notifications:read"],
   COMPTABLE_SIEGE: ["operations:agencies:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:verification:read","operations:fund:manage","platform:notifications:read","treasury:accounts:read","treasury:reports:read"]
 };
+const TREASURY_EXTENDED_READ = ["treasury:wallets:read", "treasury:imports:read", "treasury:attachments:read"];
+const TREASURY_EXTENDED_MANAGE = ["treasury:wallets:manage", "treasury:imports:manage", "treasury:attachments:manage"];
+ROLE_PERMS.DIRECTEUR_FINANCIER.push(...TREASURY_EXTENDED_READ);
+ROLE_PERMS.TRESORIER_CHEF.push(...TREASURY_EXTENDED_READ, ...TREASURY_EXTENDED_MANAGE);
+ROLE_PERMS.COMPTABLE.push(...TREASURY_EXTENDED_READ, ...TREASURY_EXTENDED_MANAGE);
+ROLE_PERMS.AUDITEUR_INTERNE.push(...TREASURY_EXTENDED_READ);
 
 const USERS = [
   { id: ADMIN, email:"demo.admin@paositra-demo.mg", name:"[DEMO] Admin Système", role:"ADMIN_SYSTEME" },

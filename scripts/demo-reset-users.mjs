@@ -59,7 +59,10 @@ const PERMISSIONS = {
     "treasury:reports:export",
     "treasury:receivables:read",
     "treasury:receivables:export",
-    "treasury:budget:read"
+    "treasury:budget:read",
+    "treasury:wallets:read",
+    "treasury:imports:read",
+    "treasury:attachments:read"
   ],
   treasuryManage: [
     "treasury:institutions:write",
@@ -73,7 +76,10 @@ const PERMISSIONS = {
     "treasury:flows:manage",
     "treasury:receivables:write",
     "treasury:budget:manage",
-    "treasury:budget:validate"
+    "treasury:budget:validate",
+    "treasury:wallets:manage",
+    "treasury:imports:manage",
+    "treasury:attachments:manage"
   ],
   operationsRead: [
     "operations:dashboard:read",

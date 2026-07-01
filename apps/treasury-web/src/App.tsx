@@ -671,28 +671,28 @@ const treasuryDemoSteps: Array<{
   {
     number: 4,
     title: "Gestion des comptes",
-    summary: "Comptes MGA ou devises, mouvements, rapprochement manuel et journal. Portefeuille électronique et imports externes restent à cadrer.",
-    status: "Partiel",
+    summary: "Comptes MGA ou devises, portefeuilles électroniques, mouvements validés, imports CSV contrôlés et rapprochement.",
+    status: "Disponible en démo",
     target: "accounts"
   },
   {
     number: 5,
     title: "Comptes courants",
     summary: "Comptes, encaissements, décaissements, chèques, états, rapprochement et historique des mouvements.",
-    status: "Partiel",
+    status: "Disponible en démo",
     target: "accounts"
   },
   {
     number: 6,
     title: "Élaboration du budget",
-    summary: "Ouverture d'exercice et lignes de crédit. Versions, prévisions consolidées et arrêté d'exercice restent à confirmer.",
+    summary: "Ouverture d'exercice, versions numérotées, copie, activation contrôlée et lignes de crédit. Les prévisions consolidées et l'arrêté restent à confirmer.",
     status: "Partiel",
     target: "budget"
   },
   {
     number: 7,
     title: "Exécution du budget",
-    summary: "Création de dossiers, références, étapes de validation, rejet, paiement, archivage et bordereau.",
+    summary: "Création de dossiers, références, pièces jointes sécurisées, étapes de validation, rejet, paiement, archivage et bordereau.",
     status: "Disponible en démo",
     target: "budget"
   },
