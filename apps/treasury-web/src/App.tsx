@@ -1,5 +1,9 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { CurrentAccountsModule } from "./CurrentAccountsModule";
+import { BudgetModule } from "./BudgetModule";
+import { TreasuryDashboardModule } from "./TreasuryDashboardModule";
 import {
+  AmountInput,
   ApiError,
   AppShell,
   ChangePasswordPage,
@@ -55,36 +59,18 @@ interface RbacRole {
   status: string;
 }
 
-interface DemoScreen {
-  id: string;
-  label: string;
-  title: string;
-  dao: string;
-  status: "visible" | "partiel" | "vide" | "bloqué" | "proposition";
-  api: string;
-  missing: string;
-  message?: string;
-  details?: DemoDetail[];
-}
-
-interface DemoDetail {
-  subject: string;
-  missing: string;
-  risk: string;
-  hypothesis: string;
-  expected: string;
-}
-
-interface DemoBlueprint {
-  tableTitle: string;
-  columns: string[];
-  formTitle: string;
-  fields: string[];
-  documentTitle: string;
-  documentLines: string[];
-  workflowTitle: string;
-  workflowSteps: string[];
-}
+type TreasuryTab =
+  | "guide"
+  | "institutions"
+  | "placements"
+  | "receivables"
+  | "accounts"
+  | "budget"
+  | "dashboard"
+  | "roles"
+  | "clarifications"
+  | "users"
+  | "audit";
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -106,435 +92,22 @@ const emptyUserForm = {
   mustChangePassword: true
 };
 
-const paomaClarifications: DemoDetail[] = [
-  {
-    subject: "Matrice des rôles",
-    missing: "Profils, périmètres, délégations et incompatibilités",
-    risk: "Droits excessifs ou blocage des utilisateurs",
-    hypothesis: "RBAC technique provisoire avec refus par défaut",
-    expected: "Matrice contractuelle validée"
-  },
-  {
-    subject: "Workflows et statuts",
-    missing: "Transitions exactes, motifs, rejets et validations",
-    risk: "Workflow inventé ou impossible à recetter",
-    hypothesis: "Statuts techniques minimaux",
-    expected: "Diagrammes et statuts officiels"
-  },
-  {
-    subject: "Référentiel comptable",
-    missing: "PCOP 2006, PCG, procédure interne ou référentiel hybride",
-    risk: "Comptabilité non conforme",
-    hypothesis: "PCOP 2006 comme cadrage provisoire",
-    expected: "Référentiel applicable à PAOMA"
-  },
-  {
-    subject: "Schémas d'écritures",
-    missing: "Débits, crédits, journaux et pièces par opération",
-    risk: "Écritures invalides",
-    hypothesis: "Règles proposed non publiables",
-    expected: "Schémas validés"
-  },
-  {
-    subject: "Données initiales",
-    missing: "Agences, comptes, organes, produits, VP et utilisateurs",
-    risk: "Données fictives",
-    hypothesis: "Aucun seed métier",
-    expected: "Référentiels officiels"
-  },
-  {
-    subject: "Calculs de placements",
-    missing: "Jours, intérêts, arrondis, fiscalité, pénalités",
-    risk: "Calcul financier faux",
-    hypothesis: "Moteur paramétrable désactivé",
-    expected: "Règles financières validées"
-  },
-  {
-    subject: "Imports et intégrations",
-    missing: "CPS, banques, CCP, plateforme X et reprise",
-    risk: "Rapprochements faux",
-    hypothesis: "Adaptateurs à définir",
-    expected: "Contrats et jeux de tests"
-  },
-  {
-    subject: "Documents officiels",
-    missing: "Rapports, factures, tickets, AC, G59/G60",
-    risk: "Documents rejetés",
-    hypothesis: "Exports modèles à valider",
-    expected: "Gabarits officiels"
-  },
-  {
-    subject: "Caisse et agences",
-    missing: "Billetage, seuils, journée, écarts et délégations",
-    risk: "Soldes ou verrouillages faux",
-    hypothesis: "Validation désactivée",
-    expected: "Procédures signées"
-  },
-  {
-    subject: "Sécurité opérationnelle",
-    missing: "SSO, 2FA, sessions, clés, journaux",
-    risk: "Accès non conforme",
-    hypothesis: "Auth locale contrôlée pour démo",
-    expected: "Architecture IAM"
-  },
-  {
-    subject: "Identifiant transaction",
-    missing: "Format, séquence, entité et non-réutilisation",
-    risk: "Traçabilité contestable",
-    hypothesis: "[LOT]-[MODULE]-[TYPE]-[YYYYMMDDHHMMSS]-[ENTITE]-[SEQUENCE]",
-    expected: "Format définitif"
-  },
-  {
-    subject: "Cloud et PRA/PCA",
-    missing: "Fournisseur, RPO/RTO, sauvegarde et recette",
-    risk: "Déploiement non recevable",
-    hypothesis: "Scripts locaux provisoires",
-    expected: "Cible d'exploitation"
-  }
+const currencyOptions = ["MGA", "EUR", "USD"];
+const depositModeOptions = [
+  "Dépôt à terme",
+  "Compte bancaire",
+  "Espèces en caisse",
+  "Virement bancaire",
+  "Chèque"
+];
+const interestModeOptions = [
+  "Exact/365",
+  "Exact/360",
+  "30/360",
+  "Simple/360",
+  "Simple/365"
 ];
 
-const pcopDetails: DemoDetail[] = [
-  {
-    subject: "Référentiel",
-    missing: "Confirmation officielle du référentiel applicable",
-    risk: "Utiliser un plan comptable non applicable",
-    hypothesis: "PCOP 2006 — Plan Comptable des Opérations Publiques",
-    expected: "Décision PAOMA"
-  },
-  {
-    subject: "Plan de comptes",
-    missing: "Comptes PAOMA validés",
-    risk: "Imputations fausses",
-    hypothesis: "Structure importable en statut proposed",
-    expected: "Plan validé"
-  },
-  {
-    subject: "Journaux",
-    missing: "Journaux officiels",
-    risk: "Journalisation non conforme",
-    hypothesis: "Journaux candidats tous proposed",
-    expected: "Liste des journaux à activer"
-  },
-  {
-    subject: "Règles",
-    missing: "Schémas débit/crédit",
-    risk: "Écritures comptables invalides",
-    hypothesis: "Règles proposed non publiables",
-    expected: "Règles validées par opération"
-  }
-];
-
-const treasuryBlueprints: Record<string, DemoBlueprint> = {
-  dashboard: {
-    tableTitle: "Indicateurs prévus",
-    columns: ["Indicateur", "Périmètre", "Période", "Source", "Valeur"],
-    formTitle: "Filtres du tableau de bord",
-    fields: ["Période", "Direction", "Compte", "Institution", "Statut"],
-    documentTitle: "Vue consolidée prévue",
-    documentLines: ["Soldes", "Crédits", "Dossiers reçus", "Dossiers traités", "Délais"],
-    workflowTitle: "Chaîne de calcul",
-    workflowSteps: ["Source réelle", "Règle validée", "Agrégation backend", "Contrôle RBAC", "Affichage"]
-  },
-  placements: {
-    tableTitle: "Placements enregistrés",
-    columns: ["Référence", "Institution", "Montant", "Devise", "Taux", "Début", "Échéance", "Statut"],
-    formTitle: "Structure d'un placement",
-    fields: ["Institution", "Montant principal", "Devise", "Taux", "Durée", "Mode dépôt", "Mode calcul", "Date début"],
-    documentTitle: "Journal des placements",
-    documentLines: ["Ouverture", "Renouvellement", "Rapatriement principal", "Rapatriement intérêts", "Clôture"],
-    workflowTitle: "Actions prévues",
-    workflowSteps: ["Créer", "Modifier selon profil", "Notifier", "Rapatrier", "Clôturer", "Historiser"]
-  },
-  institutions: {
-    tableTitle: "Institutions financières",
-    columns: ["Code", "Nom", "Type", "Compte associé", "Statut", "Date validation"],
-    formTitle: "Fiche institution",
-    fields: ["Nom", "Type", "Coordonnées", "Compte bancaire", "Statut", "Note de validation"],
-    documentTitle: "Référentiel institutions",
-    documentLines: ["Institution validée", "Compte associé", "Périmètre autorisé", "Historique des changements"],
-    workflowTitle: "Contrôle référentiel",
-    workflowSteps: ["Proposition", "Validation PAOMA", "Activation", "Archivage sans suppression"]
-  },
-  "new-placement": {
-    tableTitle: "Paramètres nécessaires",
-    columns: ["Paramètre", "Source", "Obligatoire", "Statut", "Commentaire"],
-    formTitle: "Formulaire d'ouverture",
-    fields: ["Institution", "Montant", "Devise", "Taux", "Durée", "Mode dépôt", "Mode calcul", "Justificatif"],
-    documentTitle: "Bordereau d'ouverture",
-    documentLines: ["Référence transaction", "Données placement", "Validation", "Pièces jointes", "Audit"],
-    workflowTitle: "Contrôles avant enregistrement",
-    workflowSteps: ["Institution active", "Droits utilisateur", "Idempotence", "Audit", "Règle comptable validée"]
-  },
-  billing: {
-    tableTitle: "Factures et recouvrements",
-    columns: ["Facture", "Client", "Période", "Montant", "Créance liée", "Statut", "Échéance"],
-    formTitle: "Dossier facture",
-    fields: ["Client", "Période", "CPS source", "Montant", "Pièces", "Motif réclamation", "Statut"],
-    documentTitle: "Gabarit facture vide",
-    documentLines: ["En-tête PAOMA", "Client", "Période facturée", "Lignes de facturation", "Total", "Mentions à valider"],
-    workflowTitle: "Workflow facturation",
-    workflowSteps: ["Importer CPS", "Vérifier", "Rapprocher créance", "Émettre facture", "Relancer", "Recouvrer"]
-  },
-  reporting: {
-    tableTitle: "Rapports disponibles",
-    columns: ["Rapport", "Période", "Format", "Source", "Statut modèle"],
-    formTitle: "Paramètres d'export",
-    fields: ["Rapport", "Période", "Filtre", "Format", "Destinataire"],
-    documentTitle: "Marquage export",
-    documentLines: ["DÉMO — NON CONTRACTUEL — MODÈLE À VALIDER PAR PAOMA", "Filtres", "Colonnes", "Signature", "Horodatage"],
-    workflowTitle: "Contrôles export",
-    workflowSteps: ["Données réelles", "RBAC", "Traçabilité", "Modèle validé", "Génération"]
-  },
-  "pcop-accounting": {
-    tableTitle: "Objets comptables configurables",
-    columns: ["Objet", "Statut", "Source", "Validation requise", "Utilisation"],
-    formTitle: "Référence comptable",
-    fields: ["Référentiel", "Version", "Source", "Statut", "Validateur", "Note"],
-    documentTitle: "Schéma comptable proposé",
-    documentLines: ["Référentiel PCOP 2006 à confirmer", "Journal proposé", "Débit proposé", "Crédit proposé", "Validation PAOMA"],
-    workflowTitle: "Publication d'écriture",
-    workflowSteps: ["Règle proposed", "Validation PAOMA", "Compte actif", "Débit = crédit", "Postage", "Contrepassation si correction"]
-  },
-  "paoma-clarifications": {
-    tableTitle: "Décisions attendues",
-    columns: ["Point", "Responsable", "Document attendu", "Risque", "Statut"],
-    formTitle: "Fiche de clarification",
-    fields: ["Sujet", "Question", "Impact", "Hypothèse KCI", "Décision PAOMA"],
-    documentTitle: "Compte-rendu de clarification",
-    documentLines: ["Décision", "Responsable", "Date", "Impacts front/back/API/base", "Pièces associées"],
-    workflowTitle: "Traitement d'une clarification",
-    workflowSteps: ["Identifier", "Documenter", "Valider PAOMA", "Mettre à jour matrice", "Implémenter"]
-  }
-};
-
-const defaultTreasuryBlueprint: DemoBlueprint = {
-  tableTitle: "Registre prévu",
-  columns: ["Référence", "Date", "Libellé", "Montant", "Statut", "Validateur", "Audit"],
-  formTitle: "Formulaire prévu",
-  fields: ["Référence", "Date", "Libellé", "Montant", "Pièce justificative", "Commentaire", "Statut"],
-  documentTitle: "Gabarit document vide",
-  documentLines: ["En-tête", "Référence", "Données métier", "Validation", "Mentions et signatures"],
-  workflowTitle: "Workflow à valider",
-  workflowSteps: ["Saisie", "Contrôle", "Validation", "Audit", "Export"]
-};
-
-function getTreasuryBlueprint(screen: DemoScreen) {
-  return treasuryBlueprints[screen.id] ?? defaultTreasuryBlueprint;
-}
-
-const demoScreens: DemoScreen[] = [
-  {
-    id: "dashboard",
-    label: "Tableau de bord",
-    title: "Tableau de bord Trésorerie",
-    dao: "Reporting, soldes, crédits, dossiers et délais explicitement listés",
-    status: "vide",
-    api: "Agrégats réels à définir",
-    missing: "Modèles, règles de calcul et données validées"
-  },
-  {
-    id: "placements",
-    label: "Placements",
-    title: "Placements",
-    dao: "Ouverture, modification, annulation, renouvellement, rapatriement et fermeture",
-    status: "partiel",
-    api: "/api/v1/treasury/placements",
-    missing: "Formules d'intérêts, statuts, profils, renouvellement et rapatriement"
-  },
-  {
-    id: "institutions",
-    label: "Institutions financières",
-    title: "Institutions financières",
-    dao: "Configuration banques et institutions pour placements et comptes",
-    status: "partiel",
-    api: "/api/v1/treasury/institutions",
-    missing: "Référentiel initial validé par PAOMA"
-  },
-  {
-    id: "new-placement",
-    label: "Nouveau placement",
-    title: "Nouveau placement",
-    dao: "Institution, taux, durée, mode de dépôt et mode de calcul des intérêts",
-    status: "partiel",
-    api: "/api/v1/treasury/placements",
-    missing: "Référentiel institutions, taux et modes validés"
-  },
-  {
-    id: "simulation",
-    label: "Simulation",
-    title: "Simulation de placement",
-    dao: "Simulation et analyse des placements",
-    status: "bloqué",
-    api: "À définir",
-    missing: "Formules d'intérêts et conventions de calcul"
-  },
-  {
-    id: "billing",
-    label: "Facturation",
-    title: "Facturation & recouvrement",
-    dao: "Traitement, vérification, réclamation et rapprochement des factures",
-    status: "vide",
-    api: "À définir",
-    missing: "CPS, modèles de factures et workflow"
-  },
-  {
-    id: "receivables",
-    label: "Créances",
-    title: "Suivi des créances",
-    dao: "Situation des créances, relances et virements de régularisation",
-    status: "vide",
-    api: "À définir",
-    missing: "Créances initiales, relances et règles de régularisation"
-  },
-  {
-    id: "currency-accounts",
-    label: "Comptes devises",
-    title: "Comptes en devises",
-    dao: "Comptes en devises, mouvements, import, extraction et rapprochement",
-    status: "vide",
-    api: "À définir",
-    missing: "Comptes réels et règles comptables"
-  },
-  {
-    id: "operational-accounts",
-    label: "Comptes opérationnels",
-    title: "Comptes opérationnels",
-    dao: "Comptes opérationnels, mouvements, reversements et validations",
-    status: "vide",
-    api: "À définir",
-    missing: "Règles d'imputation et validation"
-  },
-  {
-    id: "wallet",
-    label: "Portefeuille électronique",
-    title: "Portefeuille électronique",
-    dao: "Portefeuille électronique, mouvements et situations",
-    status: "vide",
-    api: "À définir",
-    missing: "Règles de portefeuille et référentiel"
-  },
-  {
-    id: "current-accounts",
-    label: "Comptes courants",
-    title: "Comptes courants",
-    dao: "Encaissement, décaissement, journal, relevé bancaire/CCP",
-    status: "vide",
-    api: "À définir",
-    missing: "Formats bancaires/CCP et règles de journal"
-  },
-  {
-    id: "mandates",
-    label: "Mandatement",
-    title: "Mandatement",
-    dao: "Mandatement, bordereaux, listes et historiques",
-    status: "vide",
-    api: "À définir",
-    missing: "Workflow et références officielles"
-  },
-  {
-    id: "payments",
-    label: "Paiements",
-    title: "Paiements",
-    dao: "Paiement, mandats, états de paiement et contrôle",
-    status: "vide",
-    api: "À définir",
-    missing: "Règles de paiement et validations"
-  },
-  {
-    id: "checks",
-    label: "Chèques",
-    title: "Chèques",
-    dao: "Chèques émis, en circulation, encaissés, annulés et expirés",
-    status: "vide",
-    api: "À définir",
-    missing: "Numérotation, expiration et transitions"
-  },
-  {
-    id: "bank-reconciliation",
-    label: "Rapprochement",
-    title: "Rapprochement bancaire",
-    dao: "Comparaison solde livre / relevé bancaire, anomalies et validation",
-    status: "vide",
-    api: "À définir",
-    missing: "Formats, tolérances et règles d'anomalies"
-  },
-  {
-    id: "budget",
-    label: "Budget",
-    title: "Budget",
-    dao: "Crédits, dossiers, étapes, pièces, commentaires et archivage",
-    status: "vide",
-    api: "À définir",
-    missing: "Étapes, vérificateurs et référentiels"
-  },
-  {
-    id: "budget-execution",
-    label: "Exécution budgétaire",
-    title: "Exécution budgétaire",
-    dao: "Versions, justification, référence et historiques complets",
-    status: "vide",
-    api: "À définir",
-    missing: "Références, versions et validations"
-  },
-  {
-    id: "reporting",
-    label: "Reporting",
-    title: "Reporting",
-    dao: "Exports CSV/Excel et statistiques par module selon utilisateur",
-    status: "vide",
-    api: "À définir",
-    missing: "Modèles officiels et règles de calcul"
-  },
-  {
-    id: "settings",
-    label: "Paramètres",
-    title: "Paramètres",
-    dao: "Listes, comptes, rubriques, programmes, lignes, devises, statuts et calendrier",
-    status: "vide",
-    api: "À définir",
-    missing: "Référentiels validés par Paositra"
-  },
-  {
-    id: "users",
-    label: "Utilisateurs",
-    title: "Utilisateurs / profils / habilitations",
-    dao: "Utilisateurs avec profil, organe, habilitations et privilèges",
-    status: "bloqué",
-    api: "/api/v1/platform/users",
-    missing: "Matrice contractuelle des rôles et délégations"
-  },
-  {
-    id: "audit",
-    label: "Audit",
-    title: "Audit",
-    dao: "Piste d'audit complète et inaltérable",
-    status: "partiel",
-    api: "/api/v1/platform/audit-events",
-    missing: "Écran d'administration et droits finaux"
-  },
-  {
-    id: "pcop-accounting",
-    label: "Cadrage PCOP 2006",
-    title: "Cadrage comptable PCOP 2006",
-    dao: "Comptabilité publique proposée pour cadrer placements, comptes, budget et rapprochements",
-    status: "proposition",
-    api: "Tables accounting configurables",
-    missing: "Référentiel, comptes, journaux et schémas validés par PAOMA",
-    message: "Schéma comptable proposé sur base PCOP 2006 — à valider par PAOMA. Aucune écriture réelle n'est générée depuis une règle proposée.",
-    details: pcopDetails
-  },
-  {
-    id: "paoma-clarifications",
-    label: "Points à clarifier",
-    title: "Points à clarifier avec PAOMA",
-    dao: "Décisions indispensables avant activation des modules métier",
-    status: "bloqué",
-    api: "Sans objet",
-    missing: "Décisions PAOMA",
-    message: "Je ne peux pas traiter cette partie car l'information requise est absente des données fournies.",
-    details: paomaClarifications
-  }
-];
 
 export function App() {
   const auth = useAuth();
@@ -548,7 +121,7 @@ export function App() {
     <AppShell title="Gestion de la Trésorerie">
       {DEMO_MODE && (
         <div className="demo-banner">
-          MODE PRÉSENTATION — MODULES CONNECTÉS API UNIQUEMENT — AUCUNE DONNÉE MÉTIER FICTIVE
+          MODE PRÉSENTATION — DONNÉES NON CONTRACTUELLES
         </div>
       )}
       <TreasuryWorkspace />
@@ -556,217 +129,10 @@ export function App() {
   );
 }
 
-function TreasuryDemoWorkspace() {
-  const firstScreen = demoScreens[0]!;
-  const [activeId, setActiveId] = useState(firstScreen.id);
-  const active = demoScreens.find((screen) => screen.id === activeId) ?? firstScreen;
-  const blueprint = getTreasuryBlueprint(active);
-
-  return (
-    <>
-      <div className="demo-banner">DÉMONSTRATION PROVISOIRE — CONFORME DAO — DONNÉES MÉTIER À VALIDER</div>
-      <div className="presentation-layout">
-        <nav className="side-menu" aria-label="Écrans de démonstration Trésorerie">
-          {demoScreens.map((screen) => (
-            <button
-              className={screen.id === active.id ? "active" : ""}
-              key={screen.id}
-              onClick={() => setActiveId(screen.id)}
-              type="button"
-            >
-              {screen.label}
-            </button>
-          ))}
-        </nav>
-        <section className="demo-main">
-          <p className="breadcrumb">Lot 1 / Trésorerie / {active.label}</p>
-          <div className="panel">
-            <div className="demo-title">
-              <div>
-                <p className="eyebrow">PAOSITRA MALAGASY</p>
-                <h2>{active.title}</h2>
-                <p className="muted">{active.dao}</p>
-              </div>
-              <span className={`badge ${active.status === "bloqué" || active.status === "proposition" ? "warning" : ""}`}>
-                {active.status}
-              </span>
-            </div>
-            <Message type="info">
-              {active.message ??
-                "Aucune donnée réelle disponible pour cette démonstration. Les règles métier fines, les référentiels, les modèles de rapports et les habilitations définitives doivent être validés par Paositra."}
-            </Message>
-            <div className="kpi-grid">
-              <div className="kpi-card">
-                <span>Données réelles chargées</span>
-                <strong>0</strong>
-                <small>Démo sans données métier</small>
-              </div>
-              <div className="kpi-card">
-                <span>Exports actifs</span>
-                <strong>—</strong>
-                <small>À activer après validation</small>
-              </div>
-              <div className="kpi-card">
-                <span>Règles métier</span>
-                <strong>—</strong>
-                <small>À clarifier</small>
-              </div>
-            </div>
-            <div className="empty-state">
-              <strong>État vide réel</strong>
-              <span>Aucun enregistrement réel n'est présent pour cet écran.</span>
-              <span>API prévue : {active.api}</span>
-              <span>Blocage : {active.missing}</span>
-            </div>
-            <DemoPreview blueprint={blueprint} screen={active} />
-            {active.details && (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Sujet</th>
-                      <th>Ce qui manque</th>
-                      <th>Risque</th>
-                      <th>Hypothèse KCI</th>
-                      <th>À confirmer</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {active.details.map((item) => (
-                      <tr key={item.subject}>
-                        <td>{item.subject}</td>
-                        <td>{item.missing}</td>
-                        <td>{item.risk}</td>
-                        <td>{item.hypothesis}</td>
-                        <td>{item.expected}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </>
-  );
-}
-
-function DemoPreview({
-  blueprint,
-  screen
-}: {
-  blueprint: DemoBlueprint;
-  screen: DemoScreen;
-}) {
-  return (
-    <div className="module-demo">
-      <section className="capability-board" aria-label="Lecture métier de l'écran">
-        <article>
-          <h3>Visible aujourd'hui</h3>
-          <ul>
-            <li>{blueprint.tableTitle}</li>
-            <li>{blueprint.formTitle}</li>
-            <li>{blueprint.documentTitle}</li>
-            <li>État vide réel sans données inventées</li>
-          </ul>
-        </article>
-        <article>
-          <h3>Demandé par le DAO</h3>
-          <ul>
-            <li>{screen.dao}</li>
-            <li>Registre, saisie, historique, contrôles et export selon le module</li>
-            <li>{blueprint.workflowTitle}</li>
-          </ul>
-        </article>
-        <article>
-          <h3>À valider PAOMA</h3>
-          <ul>
-            <li>{screen.missing}</li>
-            <li>Activation API : {screen.api}</li>
-            <li>Aucun traitement métier définitif sans validation</li>
-          </ul>
-        </article>
-      </section>
-
-      <section className="demo-preview module-surface" aria-labelledby={`${screen.id}-surface`}>
-        <div className="surface-heading">
-          <div>
-            <h3 id={`${screen.id}-surface`}>{blueprint.tableTitle}</h3>
-            <p className="muted">Les colonnes et champs montrent le périmètre attendu, sans créer de donnée métier.</p>
-          </div>
-          <span className="badge warning">modèle à valider</span>
-        </div>
-        <div className="surface-grid">
-          <div className="surface-block wide">
-            <h4>{blueprint.tableTitle}</h4>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {blueprint.columns.map((column) => (
-                      <th key={column}>{column}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan={blueprint.columns.length} className="empty-row">
-                      Aucune donnée réelle disponible. Le tableau montre uniquement la structure attendue.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="surface-block">
-            <h4>{blueprint.formTitle}</h4>
-            <div className="form-skeleton compact">
-              {blueprint.fields.map((field) => (
-                <label key={field}>
-                  {field}
-                  <input disabled placeholder="À valider PAOMA" />
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="surface-block document-preview">
-            <h4>{blueprint.documentTitle}</h4>
-            <div className="document-sheet compact">
-              <div>
-                <strong>PAOSITRA MALAGASY</strong>
-                <span>DÉMO — NON CONTRACTUEL</span>
-              </div>
-              {blueprint.documentLines.map((line) => (
-                <p key={line}>
-                  <span>{line}</span>
-                  <em>À compléter après validation</em>
-                </p>
-              ))}
-            </div>
-          </div>
-          <div className="surface-block">
-            <h4>{blueprint.workflowTitle}</h4>
-            <ol className="workflow-list">
-              {blueprint.workflowSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-            <div className="contract-panel">
-              <strong>Front / back / audit</strong>
-              <span>Route ou API prévue : {screen.api}</span>
-              <span>Condition d'activation : {screen.missing}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
 
 function TreasuryWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"institutions" | "placements" | "receivables" | "roles" | "clarifications" | "users" | "audit">("placements");
+  const [tab, setTab] = useState<TreasuryTab>("guide");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -778,6 +144,17 @@ function TreasuryWorkspace() {
   const [loading, setLoading] = useState(false);
   const [simResult, setSimResult] = useState<{ interest: number; total: number; maturityDate: string; basis: string } | null>(null);
   const [insights, setInsights] = useState<Array<{ id: string; maturityDate: string; daysRemaining: number; maturingSoon: boolean }>>([]);
+  const canSeeClarifications = [
+    "demo.admin@paositra-demo.mg",
+    "demo.admin@paositra.local"
+  ].includes(auth.user?.email ?? "");
+  const hasTreasuryBusinessAccess =
+    auth.hasPermission("treasury:dashboard:read") ||
+    auth.hasPermission("treasury:institutions:read") ||
+    auth.hasPermission("treasury:placements:read") ||
+    auth.hasPermission("treasury:receivables:read") ||
+    auth.hasPermission("treasury:accounts:read") ||
+    auth.hasPermission("treasury:budget:read");
 
   const load = useCallback(async () => {
     try {
@@ -824,6 +201,27 @@ function TreasuryWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleTabs: Array<{ id: TreasuryTab; label: string }> = [
+    hasTreasuryBusinessAccess && { id: "guide", label: "Guide démo Lot 1" },
+    auth.hasPermission("treasury:placements:read") && { id: "placements", label: "Placements" },
+    auth.hasPermission("treasury:receivables:read") && { id: "receivables", label: "Créances" },
+    auth.hasPermission("treasury:accounts:read") && { id: "accounts", label: "Comptes courants" },
+    auth.hasPermission("treasury:budget:read") && { id: "budget", label: "Budget" },
+    auth.hasPermission("treasury:dashboard:read") && { id: "dashboard", label: "Tableau de bord" },
+    auth.hasPermission("treasury:institutions:read") && { id: "institutions", label: "Institutions" },
+    auth.hasPermission("platform:roles:read") && { id: "roles", label: "Rôles & habilitations" },
+    canSeeClarifications && { id: "clarifications", label: "Parcours à cadrer" },
+    auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
+    auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
+  ].filter(Boolean) as Array<{ id: TreasuryTab; label: string }>;
+  const canSeeCurrentTab = visibleTabs.some((item) => item.id === tab);
+
+  useEffect(() => {
+    if (!canSeeCurrentTab && visibleTabs[0]) {
+      setTab(visibleTabs[0].id);
+    }
+  }, [auth.user, canSeeCurrentTab, tab, visibleTabs]);
 
   async function createInstitution(event: FormEvent) {
     event.preventDefault();
@@ -985,63 +383,58 @@ function TreasuryWorkspace() {
 
   return (
     <>
-      <section className="panel module-home">
+      {hasTreasuryBusinessAccess && <section className="panel module-home">
         <div>
           <p className="eyebrow">LOT 1 — TRÉSORERIE</p>
-          <h2>Modules opérationnels connectés au backend</h2>
-          <p className="muted">
-            Cette vue affiche uniquement les fonctions réellement reliées à l'API, aux permissions et à l'audit.
-            Les modules DAO non couverts par une route backend ne sont pas présentés comme utilisables.
-          </p>
+          <h2>Modules opérationnels</h2>
         </div>
         <div className="kpi-grid">
           <div className="kpi-card">
             <span>Institutions financières</span>
             <strong>{institutions.length}</strong>
-            <small>Données lues depuis /api/v1/treasury/institutions</small>
+            <small>Données issues du référentiel financier chargé dans la démonstration. Les institutions officielles restent à confirmer par PAOSITRA.</small>
           </div>
           <div className="kpi-card">
             <span>Placements</span>
             <strong>{placements.length}</strong>
-            <small>Données lues depuis /api/v1/treasury/placements</small>
+            <small>Placements enregistrés dans le périmètre autorisé du compte connecté.</small>
           </div>
           <div className="kpi-card">
             <span>Rôles proposés</span>
             <strong>{roles.length}</strong>
-            <small>Proposition KCI — à valider PAOMA</small>
+            <small>Rôles de travail proposés pour la démonstration, à valider ou corriger par PAOSITRA.</small>
           </div>
           <div className="kpi-card">
             <span>Audit consultable</span>
             <strong>{auditEvents.length}</strong>
-            <small>Derniers événements chargés depuis l'API</small>
+            <small>Dernières actions enregistrées dans la piste d'audit de la démonstration.</small>
           </div>
         </div>
-      </section>
-      <nav className="tabs" aria-label="Modules de trésorerie">
-        <button className={tab === "placements" ? "active" : ""} onClick={() => setTab("placements")}>
-          Placements
-        </button>
-        <button className={tab === "receivables" ? "active" : ""} onClick={() => setTab("receivables")}>
-          Créances
-        </button>
-        <button className={tab === "institutions" ? "active" : ""} onClick={() => setTab("institutions")}>
-          Institutions
-        </button>
-        <button className={tab === "roles" ? "active" : ""} onClick={() => setTab("roles")}>
-          Rôles &amp; habilitations
-        </button>
-        <button className={tab === "clarifications" ? "active" : ""} onClick={() => setTab("clarifications")}>
-          Points à clarifier
-        </button>
-        <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
-          Utilisateurs
-        </button>
-        <button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
-          Audit
-        </button>
+      </section>}
+      <nav className="tabs" aria-label="Modules de tresorerie">
+        {visibleTabs.map((item) => (
+          <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "receivables" ? (
+      {visibleTabs.length === 0 ? (
+        <Message type="info">Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre.</Message>
+      ) : !canSeeCurrentTab ? (
+        <Message type="info">Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre.</Message>
+      ) : tab === "guide" ? (
+        <TreasuryDemoGuide
+          canOpen={(target) => visibleTabs.some((item) => item.id === target)}
+          onOpen={setTab}
+        />
+      ) : tab === "dashboard" ? (
+        <TreasuryDashboardModule />
+      ) : tab === "budget" ? (
+        <BudgetModule />
+      ) : tab === "accounts" ? (
+        <CurrentAccountsModule />
+      ) : tab === "receivables" ? (
         <TreasuryReceivables />
       ) : tab === "roles" ? (
         <TreasuryRolesHabilitations roles={roles} />
@@ -1159,10 +552,13 @@ function TreasuryWorkspace() {
                     </select>
                   </label>
                   <label>Montant principal
-                    <input inputMode="decimal" required value={placementForm.principalAmount} onChange={(e) => setPlacementForm({ ...placementForm, principalAmount: e.target.value })} />
+                    <AmountInput required value={placementForm.principalAmount} onValueChange={(value) => setPlacementForm({ ...placementForm, principalAmount: value })} />
                   </label>
                   <label>Devise (code ISO à trois lettres)
-                    <input maxLength={3} required value={placementForm.currency} onChange={(e) => setPlacementForm({ ...placementForm, currency: e.target.value.toUpperCase() })} />
+                    <select required value={placementForm.currency} onChange={(e) => setPlacementForm({ ...placementForm, currency: e.target.value })}>
+                      <option value="">Sélectionner</option>
+                      {currencyOptions.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+                    </select>
                   </label>
                   <label>Taux d'intérêt annuel (%)
                     <input inputMode="decimal" required value={placementForm.annualInterestRate} onChange={(e) => setPlacementForm({ ...placementForm, annualInterestRate: e.target.value })} />
@@ -1171,10 +567,16 @@ function TreasuryWorkspace() {
                     <input type="number" min="1" required value={placementForm.durationDays} onChange={(e) => setPlacementForm({ ...placementForm, durationDays: e.target.value })} />
                   </label>
                   <label>Mode de dépôt
-                    <input required value={placementForm.depositMode} onChange={(e) => setPlacementForm({ ...placementForm, depositMode: e.target.value })} />
+                    <select required value={placementForm.depositMode} onChange={(e) => setPlacementForm({ ...placementForm, depositMode: e.target.value })}>
+                      <option value="">Sélectionner</option>
+                      {depositModeOptions.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                    </select>
                   </label>
                   <label>Mode de calcul des intérêts
-                    <input required value={placementForm.interestCalculationMode} onChange={(e) => setPlacementForm({ ...placementForm, interestCalculationMode: e.target.value })} />
+                    <select required value={placementForm.interestCalculationMode} onChange={(e) => setPlacementForm({ ...placementForm, interestCalculationMode: e.target.value })}>
+                      <option value="">Sélectionner</option>
+                      {interestModeOptions.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                    </select>
                   </label>
                   <label>Date de début
                     <input type="date" required value={placementForm.startDate} onChange={(e) => setPlacementForm({ ...placementForm, startDate: e.target.value })} />
@@ -1200,12 +602,13 @@ function TreasuryWorkspace() {
                 </div>
               )}
             </div>
-            {placements.length === 0 ? <p className="empty">Aucun placement enregistré.</p> : (
-              <div className="table-wrap">
+            <div className="table-wrap">
                 <table>
                   <thead><tr><th>Institution</th><th>Montant</th><th>Début</th><th>Durée</th><th>Échéance</th><th>État</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {placements.map((item) => {
+                    {placements.length === 0 ? (
+                      <tr><td colSpan={7} className="empty">Aucun placement n'est enregistré dans ce périmètre. Le gabarit et les exports restent disponibles pour l'initialisation validée.</td></tr>
+                    ) : placements.map((item) => {
                       const ins = insights.find((x) => x.id === item.id);
                       const statusLabel = item.status === "open" ? "Ouvert" : item.status === "closed" ? "Clôturé" : item.status === "cancelled" ? "Annulé" : item.status === "renewed" ? "Renouvelé" : "Rapatrié";
                       return (
@@ -1230,7 +633,6 @@ function TreasuryWorkspace() {
                   </tbody>
                 </table>
               </div>
-            )}
           </section>
         </div>
       )}
@@ -1238,16 +640,145 @@ function TreasuryWorkspace() {
   );
 }
 
+const treasuryDemoSteps: Array<{
+  number: number;
+  title: string;
+  summary: string;
+  status: "Disponible en démo" | "Partiel" | "À cadrer";
+  target?: TreasuryTab;
+}> = [
+  {
+    number: 1,
+    title: "Structure globale",
+    summary: "Navigation par modules, interfaces uniformes, API versionnée, recherche locale selon les écrans, archivage et audit des actions sensibles.",
+    status: "Partiel",
+    target: "dashboard"
+  },
+  {
+    number: 2,
+    title: "Placements",
+    summary: "Ouverture, simulation, renouvellement, rapatriement, clôture, annulation, échéancier et situation Excel.",
+    status: "Disponible en démo",
+    target: "placements"
+  },
+  {
+    number: 3,
+    title: "Facturation et recouvrement",
+    summary: "Créances, relances, virements de régularisation, clôture ou contentieux, situation Excel et état PDF.",
+    status: "Disponible en démo",
+    target: "receivables"
+  },
+  {
+    number: 4,
+    title: "Gestion des comptes",
+    summary: "Comptes MGA ou devises, portefeuilles électroniques, mouvements validés, imports CSV contrôlés et rapprochement.",
+    status: "Disponible en démo",
+    target: "accounts"
+  },
+  {
+    number: 5,
+    title: "Comptes courants",
+    summary: "Comptes, encaissements, décaissements, chèques, états, rapprochement et historique des mouvements.",
+    status: "Disponible en démo",
+    target: "accounts"
+  },
+  {
+    number: 6,
+    title: "Élaboration du budget",
+    summary: "Ouverture d'exercice, versions numérotées, copie, activation contrôlée et lignes de crédit. Les prévisions consolidées et l'arrêté restent à confirmer.",
+    status: "Partiel",
+    target: "budget"
+  },
+  {
+    number: 7,
+    title: "Exécution du budget",
+    summary: "Création de dossiers, références, pièces jointes sécurisées, étapes de validation, rejet, paiement, archivage et bordereau.",
+    status: "Disponible en démo",
+    target: "budget"
+  },
+  {
+    number: 8,
+    title: "Reporting et tableaux de bord",
+    summary: "Indicateurs consolidés et exports. Les modèles officiels et statistiques avancées restent à valider par PAOSITRA.",
+    status: "Partiel",
+    target: "dashboard"
+  },
+  {
+    number: 9,
+    title: "Paramètres et configuration",
+    summary: "Institutions, devises, modes de dépôt et calculs guidés. Taux de change, calendriers et rubriques avancées restent à cadrer.",
+    status: "Partiel",
+    target: "institutions"
+  },
+  {
+    number: 10,
+    title: "Gestion des utilisateurs",
+    summary: "Création des comptes, rôles proposés, permissions, audit et changement obligatoire du mot de passe selon le profil.",
+    status: "Partiel",
+    target: "users"
+  }
+];
+
+function TreasuryDemoGuide({
+  canOpen,
+  onOpen
+}: {
+  canOpen: (target: TreasuryTab) => boolean;
+  onOpen: (target: TreasuryTab) => void;
+}) {
+  return (
+    <section className="panel demo-guide">
+      <div className="panel-head">
+        <div>
+          <p className="eyebrow">DÉMONSTRATION LOT 1</p>
+          <h2>Parcours conseillé</h2>
+          <p className="muted">Commencez par Placements, puis Créances, Comptes courants, Budget et Tableau de bord.</p>
+        </div>
+      </div>
+      <div className="demo-guide-list">
+        {treasuryDemoSteps.map((step) => (
+          <article key={step.number} className="demo-guide-row">
+            <span className="demo-guide-number">{step.number}</span>
+            <div>
+              <h3>{step.title}</h3>
+              <p>{step.summary}</p>
+            </div>
+            <span className={`badge ${step.status === "Disponible en démo" ? "source-validated" : "warning"}`}>
+              {step.status}
+            </span>
+            {step.target && canOpen(step.target) ? (
+              <button className="secondary" type="button" onClick={() => onOpen(step.target!)}>
+                Ouvrir
+              </button>
+            ) : (
+              <span className="muted">Selon habilitation</span>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
   const filtered = roles.filter((r) => r.lot === "common" || r.lot === "lot1");
   const byLot = (l: string) => filtered.filter((r) => r.lot === l);
+  const scopeLabel = (scope: string) =>
+    ({
+      global: "Toute la plateforme",
+      organ: "Organe",
+      direction: "Direction",
+      region: "Région",
+      agency: "Agence",
+      counter: "Caisse ou guichet"
+    })[scope] ?? scope;
 
   return (
     <section className="panel">
       <h2>Rôles &amp; habilitations</h2>
       <div className="roles-table-notice">
-        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
-        Le DAO reste la référence contractuelle.
+        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOSITRA avant toute utilisation en production.
+        Le DAOO reste la référence prioritaire.
       </div>
       {(["common", "lot1"] as const).map((l) => {
         const items = byLot(l);
@@ -1273,7 +804,7 @@ function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
                     <tr key={role.code}>
                       <td><code>{role.code}</code></td>
                       <td>{role.label}</td>
-                      <td>{role.scopeType}</td>
+                      <td>{scopeLabel(role.scopeType)}</td>
                       <td>{role.description ?? "—"}</td>
                       <td><span className="badge warning">Proposition à valider</span></td>
                     </tr>
@@ -1291,17 +822,111 @@ function TreasuryRolesHabilitations({ roles }: { roles: RbacRole[] }) {
   );
 }
 
-const treasuryClarifications = [
-  { num: 1, title: "Matrice des rôles Lot 1", statut: "à clarifier", contenu: "Profils Lot 1 (directeur trésorerie, gestionnaire placement, trésorier, contrôleur), périmètres d'organe et délégations à définir contractuellement par PAOMA." },
-  { num: 2, title: "Calculs financiers placements", statut: "à clarifier", contenu: "Formules d'intérêts (exact/365, 30/360, etc.), arrondi, fiscalité et pénalités de rupture non définies dans le DAO. À valider avant activation du moteur." },
-  { num: 3, title: "Référentiel institutions financières", statut: "absent", contenu: "La liste des banques et institutions autorisées pour les placements PAOMA doit être fournie officiellement. Aucun seed métier n'est présent." },
-  { num: 4, title: "Workflows de placement", statut: "partiel", contenu: "Ouverture et annulation sont implémentés. Renouvellement, rapatriement principal/intérêts et prolongation nécessitent des règles métier validées." },
-  { num: 5, title: "Référentiel comptable trésorerie", statut: "à clarifier", contenu: "PCOP 2006 utilisé comme cadrage. Comptes, journaux et schémas débit/crédit pour placements, virements et rapprochements doivent être validés par PAOMA." },
-  { num: 6, title: "Facturation et recouvrement", statut: "absent", contenu: "Module non couvert par une route backend. CPS, modèles de factures, workflow de réclamation et règles de rapprochement à définir." },
-  { num: 7, title: "Comptes en devises", statut: "absent", contenu: "Comptes réels, taux de change, règles comptables et formats d'import bancaire à fournir par PAOMA." },
-  { num: 8, title: "Rapprochement bancaire", statut: "absent", contenu: "Formats des relevés bancaires (SWIFT, MT940, CSV banque), tolérances et règles de traitement des anomalies à définir." },
-  { num: 9, title: "Reporting réglementaire Lot 1", statut: "absent", contenu: "Modèles de rapports officiels (périodicité, format, destinataires institutionnels) non définis dans le DAO." },
-  { num: 10, title: "Interopérabilité Lot 1 / Lot 2", statut: "à clarifier", contenu: "Les flux AC (accusés de crédit), rapatriements et virements entre trésorerie centrale et agences nécessitent une définition contractuelle des interfaces." }
+const treasuryClarifications: Array<{ num: number; title: string; statut: string; contenu: string[] }> = [
+  {
+    num: 1,
+    title: "Matrice des rôles Lot 1",
+    statut: "à clarifier",
+    contenu: [
+      "Le Lot 1 doit distinguer les rôles de consultation, saisie, contrôle, validation et décision financière.",
+      "Proposition KCI : séparer direction financière, trésorier chef, comptable, auditeur et consultation direction, avec des périmètres d'accès par direction, compte, institution ou opération.",
+      "Attente PAOSITRA : confirmer les profils réels, les délégations, les suppléances et les incompatibilités, par exemple entre saisie d'une opération et validation."
+    ]
+  },
+  {
+    num: 2,
+    title: "Calculs financiers placements",
+    statut: "à clarifier",
+    contenu: [
+      "Les intérêts peuvent être calculés selon plusieurs bases. Exact/365 compte les jours réels sur une année de 365 jours. Exact/360 compte les jours réels sur 360 jours, souvent utilisé par des banques. 30/360 considère chaque mois comme 30 jours, ce qui simplifie les calculs mais peut créer un écart avec les jours réels.",
+      "Proposition KCI : rendre la formule paramétrable par institution et par produit de placement, sans figer une règle officielle tant que PAOSITRA n'a pas confirmé les contrats bancaires.",
+      "Arrondi : il faut préciser si les intérêts sont arrondis à l'ariary inférieur, supérieur, le plus proche, ou selon une précision comptable. Le backend doit appliquer cette règle de façon unique pour éviter les écarts entre écran, PDF et comptabilité.",
+      "Fiscalité : selon le contexte malgache et la nature de PAOSITRA, il faut confirmer s'il existe une retenue, taxe ou exonération sur les intérêts perçus, qui la calcule, à quel moment et sur quelle base.",
+      "Risque si non confirmé : le moteur peut simuler un placement, mais les intérêts, échéances, pénalités et écritures comptables ne doivent pas être considérés comme définitifs."
+    ]
+  },
+  {
+    num: 3,
+    title: "Référentiel institutions financières",
+    statut: "démo front",
+    contenu: [
+      "Le référentiel doit distinguer banque commerciale, banque centrale, compte CCP, caisse interne, espèces, mobile money éventuel et autre organisme financier.",
+      "Liste de travail à préparer avec PAOSITRA : BNI Madagascar, BOA Madagascar, BFV-SG, MCB Madagascar, Société Générale Madagasikara, BMOI, Baobab Banque, Banque Centrale de Madagascar, comptes CCP et caisse interne. Cette liste est une proposition de cadrage, pas un référentiel officiel.",
+      "Proposition KCI : enrichir la fiche institution avec type, code interne, devise, compte rattaché, mode de dépôt autorisé, contact, statut actif/inactif et validation PAOSITRA.",
+      "Cas espèces : certaines opérations peuvent ne pas passer par une banque. Le logiciel doit pouvoir représenter une caisse ou un dépôt espèces, avec des contrôles de plafond, billetage et justification.",
+      "Attente PAOSITRA : fournir la liste officielle des institutions, comptes, conventions bancaires, devises et modes de règlement autorisés."
+    ]
+  },
+  {
+    num: 4,
+    title: "Circuit de traitement des placements",
+    statut: "partiel",
+    contenu: [
+      "Le circuit doit préciser qui propose un placement, qui le contrôle, qui l'approuve, qui constate l'échéance, et qui valide le rapatriement des fonds.",
+      "Proposition KCI : brouillon > contrôle > validation financière > ouverture > suivi échéance > renouvellement ou rapatriement > clôture comptable.",
+      "Attente PAOSITRA : confirmer les seuils d'autorisation, pièces justificatives, pénalités de rupture et règles de double validation."
+    ]
+  },
+  {
+    num: 5,
+    title: "Référentiel comptable trésorerie",
+    statut: "à clarifier",
+    contenu: [
+      "Le PCOP 2006 sert de cadrage provisoire pour structurer comptes, journaux, écritures débit/crédit, contrepassations et périodes.",
+      "Proposition KCI : garder une comptabilité configurable par type d'opération afin de remplacer les schémas provisoires par les schémas PAOSITRA validés.",
+      "Attente PAOSITRA : fournir le plan de comptes applicable, les journaux, les schémas d'écriture par placement, créance, paiement, rapprochement et régularisation."
+    ]
+  },
+  {
+    num: 6,
+    title: "Facturation et recouvrement",
+    statut: "démo front",
+    contenu: [
+      "Le module doit cadrer les créances, relances, virements reçus, pièces justificatives, contentieux et clôtures.",
+      "Proposition KCI : permettre la saisie d'une créance avec débiteur, montant, devise, date d'émission, échéance, description, statut, événements et exports.",
+      "Attente PAOSITRA : valider les modèles de factures, CPS, règles de relance, formats de reçu et autorisations de clôture ou contentieux."
+    ]
+  },
+  {
+    num: 7,
+    title: "Comptes en devises",
+    statut: "démo front",
+    contenu: [
+      "Certains comptes peuvent être en MGA ou en devise étrangère. Les taux de change et dates de valeur doivent être cadrés.",
+      "Proposition KCI : stocker la devise, le solde, la banque, les mouvements et la source du taux de change, sans calcul définitif avant validation.",
+      "Attente PAOSITRA : confirmer les devises autorisées, règles de conversion, source officielle des taux et traitements comptables des écarts de change."
+    ]
+  },
+  {
+    num: 8,
+    title: "Rapprochement bancaire",
+    statut: "démo front",
+    contenu: [
+      "Le rapprochement compare les mouvements internes avec les relevés bancaires ou justificatifs externes.",
+      "Proposition KCI : importer ou saisir les mouvements, rapprocher les lignes, isoler les écarts et produire un rapport PDF/Excel.",
+      "Attente PAOSITRA : fournir les formats de relevés, tolérances, règles de lettrage, délais et responsables de validation."
+    ]
+  },
+  {
+    num: 9,
+    title: "Reporting réglementaire Lot 1",
+    statut: "démo front",
+    contenu: [
+      "Les rapports doivent être imprimables, traçables et cohérents avec les données API, base, PDF et Excel.",
+      "Proposition KCI : produire des gabarits A4 provisoires avec mention démonstration non contractuelle, même lorsqu'aucune donnée n'est présente.",
+      "Attente PAOSITRA : fournir les modèles officiels, signatures, périodicités, destinataires et règles d'archivage."
+    ]
+  },
+  {
+    num: 10,
+    title: "Relations entre Lot 1 et Lot 2",
+    statut: "à clarifier",
+    contenu: [
+      "Les flux entre trésorerie centrale et agences concernent les virements, accusés de crédit, versements, rapatriements, régularisations et demandes de valeurs.",
+      "Proposition KCI : garder les lots séparés métier, mais prévoir des interfaces internes contrôlées pour rapprocher les opérations terrain et la trésorerie.",
+      "Attente PAOSITRA : confirmer les événements transmis, formats, pièces, validateurs et délais entre Lot 1 et Lot 2."
+    ]
+  }
 ];
 
 function TreasuryPointsAClarifier() {
@@ -1309,13 +934,13 @@ function TreasuryPointsAClarifier() {
 
   return (
     <section className="panel">
-      <h2>Points à clarifier avec PAOMA — Lot 1 Trésorerie</h2>
+      <h2>Parcours à cadrer avec PAOSITRA — Lot 1 Trésorerie</h2>
       <p className="muted">
-        Ces points sont des blocages ou propositions identifiés lors de l'analyse du DAO Lot 1.
-        Ils ne peuvent pas être traités sans décision formelle de PAOMA.
+        Ces parcours représentent les fonctions à cadrer issues de l'analyse du DAO Lot 1.
+        Ils restent à valider formellement par PAOSITRA avant activation comme règles définitives.
       </p>
       <Message type="info">
-        Le DAO reste la référence contractuelle. Aucune de ces propositions n'est implémentée comme règle définitive.
+        Le DAOO reste la référence prioritaire. Ces parcours de démonstration ne remplacent pas les règles définitives PAOSITRA.
       </Message>
       {treasuryClarifications.map((section) => (
         <div className="clarify-section" key={section.num}>
@@ -1331,7 +956,9 @@ function TreasuryPointsAClarifier() {
           </div>
           {open === section.num && (
             <div className="clarify-section-body">
-              <p>{section.contenu}</p>
+              {section.contenu.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           )}
         </div>
@@ -1448,8 +1075,12 @@ function TreasuryReceivables() {
           <h2>Nouvelle créance</h2>
           <form onSubmit={create}>
             <label>Débiteur<input required maxLength={240} value={form.debtorName} onChange={(e) => setForm({ ...form, debtorName: e.target.value })} /></label>
-            <label>Montant<input inputMode="decimal" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
-            <label>Devise<input maxLength={3} required value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></label>
+            <label>Montant<AmountInput required value={form.amount} onValueChange={(value) => setForm({ ...form, amount: value })} /></label>
+            <label>Devise
+              <select required value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                {currencyOptions.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+              </select>
+            </label>
             <label>Date d'émission<input type="date" required value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} /></label>
             <label>Date d'échéance<input type="date" required value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></label>
             <label>Description<input maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
@@ -1467,12 +1098,13 @@ function TreasuryReceivables() {
             </div>
           )}
         </div>
-        {items.length === 0 ? <p className="empty">Aucune créance enregistrée.</p> : (
-          <div className="table-wrap">
+        <div className="table-wrap">
             <table>
               <thead><tr><th>Référence</th><th>Débiteur</th><th>Montant</th><th>Échéance</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
-                {items.map((r) => {
+                {items.length === 0 ? (
+                  <tr><td colSpan={6} className="empty">Aucune créance n'est enregistrée. Le tableau et les exports restent disponibles pour l'initialisation validée.</td></tr>
+                ) : items.map((r) => {
                   const overdue = r.status !== "cloturee" && r.dueDate < new Date().toISOString().slice(0, 10);
                   return (
                     <tr key={r.id}>
@@ -1496,7 +1128,6 @@ function TreasuryReceivables() {
               </tbody>
             </table>
           </div>
-        )}
       </section>
     </div>
   );

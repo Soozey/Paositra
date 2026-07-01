@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import pg from "pg";
 
 const ownerUrl = process.env.PAOSITRA_TEST_OWNER_DATABASE_URL;
@@ -25,14 +27,10 @@ integrationDescribe("PostgreSQL security integration", () => {
     const result = await owner.query(
       "SELECT name FROM platform.schema_migrations ORDER BY name"
     );
-    expect(result.rows.map((row) => row.name)).toEqual([
-      "0001_initial.sql",
-      "0002_document_provisional_security_model.sql",
-      "0003_secure_database_roles_and_audit.sql",
-      "0004_idempotency_lifecycle.sql",
-      "0005_accounting_pcop_cadrage.sql",
-      "0006_transaction_references.sql"
-    ]);
+    const expected = readdirSync(resolve(process.cwd(), "../../database/migrations"))
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+    expect(result.rows.map((row) => row.name)).toEqual(expected);
   });
 
   it("allows the application role to write technical application records", async () => {

@@ -1,14 +1,15 @@
 # Matrice de conformité DAOO 26/005
 
+Statuts autorises pour cette matrice finale : existant, partiel, bsent,  clarifier, demo_only, proposition a valider. Une exigence ne doit pas etre presentee comme couverte de bout en bout sans preuve frontend, API, PostgreSQL, RBAC, audit, export requis, tests et documentation.
+
 Référence : `DAOO n°26/005-PAOSITRA/DG/PRMP/AOO`.
 
 Les pages indiquées correspondent à la pagination du PDF fourni. Les statuts
-autorisés sont : `À faire`, `En cours`, `Implémenté`, `À clarifier` et
-`Non applicable selon DAO`.
+historiques du document doivent être relus avec la grille finale ci-dessus.
 
-Aucune ligne n'est marquée `Implémenté`. Ce statut exige une preuve cohérente
-du frontend, de l'API, de PostgreSQL, du RBAC, de l'audit, des exports requis et
-des tests unitaires ou intégrés.
+Aucune ligne ne doit être présentée comme couverte de bout en bout sans preuve
+cohérente du frontend, de l'API, de PostgreSQL, du RBAC, de l'audit, des exports
+requis et des tests unitaires ou intégrés.
 
 ## Référentiel de cadrage proposé
 

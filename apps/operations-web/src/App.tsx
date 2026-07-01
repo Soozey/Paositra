@@ -1,5 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import {
+  AmountInput,
   ApiError,
   AppShell,
   ChangePasswordPage,
@@ -8,6 +9,9 @@ import {
   apiRequest,
   useAuth
 } from "@paositra/web-core";
+import { CashModule } from "./CashModule";
+import { VerificationModule } from "./VerificationModule";
+import { OpsDashboardModule, ValueRequestsModule, AlertsPanel } from "./ops-extra-ui";
 
 interface Paged<T> {
   items: T[];
@@ -57,36 +61,18 @@ interface AuditEvent {
   actorUserId: string | null;
 }
 
-interface DemoScreen {
-  id: string;
-  label: string;
-  title: string;
-  dao: string;
-  status: "visible" | "partiel" | "vide" | "bloqué" | "proposition";
-  api: string;
-  missing: string;
-  message?: string;
-  details?: DemoDetail[];
-}
-
-interface DemoDetail {
-  subject: string;
-  missing: string;
-  risk: string;
-  hypothesis: string;
-  expected: string;
-}
-
-interface DemoBlueprint {
-  tableTitle: string;
-  columns: string[];
-  formTitle: string;
-  fields: string[];
-  documentTitle: string;
-  documentLines: string[];
-  workflowTitle: string;
-  workflowSteps: string[];
-}
+type OperationsTab =
+  | "agencies"
+  | "caisses"
+  | "verification"
+  | "opsdashboard"
+  | "valeurs"
+  | "alertes"
+  | "referentiel"
+  | "roles"
+  | "clarifications"
+  | "users"
+  | "audit";
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -108,520 +94,6 @@ const emptyUserForm = {
   mustChangePassword: true
 };
 
-const paomaClarifications: DemoDetail[] = [
-  {
-    subject: "Matrice des rôles",
-    missing: "Profils, périmètres, délégations et incompatibilités",
-    risk: "Droits excessifs ou blocage des utilisateurs",
-    hypothesis: "RBAC technique provisoire avec refus par défaut",
-    expected: "Matrice contractuelle validée"
-  },
-  {
-    subject: "Workflows et statuts",
-    missing: "Transitions exactes, motifs, rejets et validations",
-    risk: "Workflow inventé ou impossible à recetter",
-    hypothesis: "Statuts techniques minimaux",
-    expected: "Diagrammes et statuts officiels"
-  },
-  {
-    subject: "Référentiel comptable",
-    missing: "PCOP 2006, PCG, procédure interne ou référentiel hybride",
-    risk: "Comptabilité non conforme",
-    hypothesis: "PCOP 2006 comme cadrage provisoire",
-    expected: "Référentiel applicable à PAOMA"
-  },
-  {
-    subject: "Schémas d'écritures",
-    missing: "Débits, crédits, journaux et pièces par opération",
-    risk: "Écritures invalides",
-    hypothesis: "Règles proposed non publiables",
-    expected: "Schémas validés"
-  },
-  {
-    subject: "Données initiales",
-    missing: "Agences, comptes, organes, produits, VP et utilisateurs",
-    risk: "Données fictives",
-    hypothesis: "Aucun seed métier",
-    expected: "Référentiels officiels"
-  },
-  {
-    subject: "Calculs de placements",
-    missing: "Jours, intérêts, arrondis, fiscalité, pénalités",
-    risk: "Calcul financier faux",
-    hypothesis: "Moteur paramétrable désactivé",
-    expected: "Règles financières validées"
-  },
-  {
-    subject: "Imports et intégrations",
-    missing: "CPS, banques, CCP, plateforme X et reprise",
-    risk: "Rapprochements faux",
-    hypothesis: "Adaptateurs à définir",
-    expected: "Contrats et jeux de tests"
-  },
-  {
-    subject: "Documents officiels",
-    missing: "Rapports, factures, tickets, AC, G59/G60",
-    risk: "Documents rejetés",
-    hypothesis: "Exports modèles à valider",
-    expected: "Gabarits officiels"
-  },
-  {
-    subject: "Caisse et agences",
-    missing: "Billetage, seuils, journée, écarts et délégations",
-    risk: "Soldes ou verrouillages faux",
-    hypothesis: "Validation désactivée",
-    expected: "Procédures signées"
-  },
-  {
-    subject: "Sécurité opérationnelle",
-    missing: "SSO, 2FA, sessions, clés, journaux",
-    risk: "Accès non conforme",
-    hypothesis: "Auth locale contrôlée pour démo",
-    expected: "Architecture IAM"
-  },
-  {
-    subject: "Identifiant transaction",
-    missing: "Format, séquence, entité et non-réutilisation",
-    risk: "Traçabilité contestable",
-    hypothesis: "[LOT]-[MODULE]-[TYPE]-[YYYYMMDDHHMMSS]-[ENTITE]-[SEQUENCE]",
-    expected: "Format définitif"
-  },
-  {
-    subject: "Cloud et PRA/PCA",
-    missing: "Fournisseur, RPO/RTO, sauvegarde et recette",
-    risk: "Déploiement non recevable",
-    hypothesis: "Scripts locaux provisoires",
-    expected: "Cible d'exploitation"
-  }
-];
-
-const pcopDetails: DemoDetail[] = [
-  {
-    subject: "Référentiel",
-    missing: "Confirmation officielle du référentiel applicable",
-    risk: "Utiliser un plan comptable non applicable",
-    hypothesis: "PCOP 2006 — Plan Comptable des Opérations Publiques",
-    expected: "Décision PAOMA"
-  },
-  {
-    subject: "Plan de comptes",
-    missing: "Comptes PAOMA validés",
-    risk: "Imputations fausses",
-    hypothesis: "Structure importable en statut proposed",
-    expected: "Plan validé"
-  },
-  {
-    subject: "Journaux",
-    missing: "Journaux officiels",
-    risk: "Journalisation non conforme",
-    hypothesis: "Journaux candidats tous proposed",
-    expected: "Liste des journaux à activer"
-  },
-  {
-    subject: "Règles",
-    missing: "Schémas débit/crédit",
-    risk: "Écritures comptables invalides",
-    hypothesis: "Règles proposed non publiables",
-    expected: "Règles validées par opération"
-  }
-];
-
-const operationsBlueprints: Record<string, DemoBlueprint> = {
-  dashboard: {
-    tableTitle: "Indicateurs opérations prévus",
-    columns: ["Indicateur", "Agence", "Période", "Source", "Valeur"],
-    formTitle: "Filtres tableau de bord",
-    fields: ["Période", "Région", "Agence", "Produit/service", "Statut"],
-    documentTitle: "Vue consolidée agences",
-    documentLines: ["Activité agences", "Anomalies", "Mises à disposition", "Documents mensuels"],
-    workflowTitle: "Chaîne de consolidation",
-    workflowSteps: ["Données agence", "Contrôle RBAC", "Agrégation backend", "Validation modèle", "Affichage"]
-  },
-  agencies: {
-    tableTitle: "Agences enregistrées",
-    columns: ["Codique", "Agence", "Zone", "Rattachement", "Statut", "Chef d'agence", "Audit"],
-    formTitle: "Fiche agence",
-    fields: ["Codique", "Nom agence", "Zone", "Rattachement", "Max numéraire", "Max VP", "Max ME"],
-    documentTitle: "Fiche agence vide",
-    documentLines: ["Identification", "Rattachement", "Seuils", "Responsables", "Historique"],
-    workflowTitle: "Cycle agence",
-    workflowSteps: ["Proposition", "Validation référentiel", "Ouverture", "Coupure", "Fermeture", "Archivage"]
-  },
-  "agency-wallet": {
-    tableTitle: "Portefeuille agence",
-    columns: ["Agence", "Numéraire", "ME", "Stock VP", "Dernière coupure", "Statut"],
-    formTitle: "Initialisation portefeuille",
-    fields: ["Agence", "Report numéraire", "Montant ME", "Types VP", "Stock VP", "Justificatif"],
-    documentTitle: "Situation portefeuille",
-    documentLines: ["Numéraire", "Monnaie électronique", "Valeurs postales", "Écarts", "Validation"],
-    workflowTitle: "Contrôles portefeuille",
-    workflowSteps: ["Initialiser", "Contrôler", "Transférer", "Rapatrier", "Auditer"]
-  },
-  "open-agency": {
-    tableTitle: "Paramètres d'ouverture",
-    columns: ["Champ", "Obligatoire", "Source", "Validation", "Statut"],
-    formTitle: "Ouverture agence",
-    fields: ["Codique", "Agence", "Zone", "Rattachement", "Max numéraire", "Max VP", "Max ME", "Date début chef"],
-    documentTitle: "Procès-verbal d'ouverture",
-    documentLines: ["Agence", "Codique", "Portefeuille initial", "Chef d'agence", "Validation"],
-    workflowTitle: "Contrôles avant ouverture",
-    workflowSteps: ["Référentiel validé", "Seuils validés", "Chef désigné", "Audit", "Activation"]
-  },
-  attachments: {
-    tableTitle: "Pièces justificatives",
-    columns: ["Référence", "Type", "Dossier", "Format", "Taille", "Statut sécurité"],
-    formTitle: "Téléversement G59-G60",
-    fields: ["Dossier", "Type pièce", "Fichier", "Date pièce", "Émetteur", "Note"],
-    documentTitle: "Bordereau pièces",
-    documentLines: ["G59", "G60", "Pièce d'identité", "Contrôle format", "Conservation"],
-    workflowTitle: "Sécurité fichier",
-    workflowSteps: ["Contrôle type", "Contrôle taille", "Stockage persistant", "Droits d'accès", "Audit"]
-  },
-  "cash-operations": {
-    tableTitle: "Opérations caisse",
-    columns: ["Référence", "Heure", "Caisse", "Type", "Mode paiement", "Montant", "Statut"],
-    formTitle: "Saisie opération caisse",
-    fields: ["Caisse", "Produit/service", "Client", "Montant", "Mode paiement", "Pièce", "Motif"],
-    documentTitle: "Ticket de caisse vide",
-    documentLines: ["Référence transaction", "Agence", "Caisse", "Opération", "Montant", "Signature"],
-    workflowTitle: "Cycle opération caisse",
-    workflowSteps: ["Saisie", "Contrôle privilège", "Ticket", "Modification même journée selon droit", "Validation journée"]
-  },
-  "daily-validation": {
-    tableTitle: "Journées à valider",
-    columns: ["Agence", "Date", "Caisse", "Recettes", "Dépenses", "Écart", "Statut"],
-    formTitle: "Validation journalière",
-    fields: ["Agence", "Date", "Chef d'agence", "Observations", "Motif écart", "Pièces"],
-    documentTitle: "Arrêté journalier vide",
-    documentLines: ["Billetage", "Recettes", "Dépenses", "Écarts", "Certification chef d'agence"],
-    workflowTitle: "Verrouillage journée",
-    workflowSteps: ["Contrôler caisses", "Vérifier écarts", "Chef d'agence valide", "Verrouiller", "Auditer"]
-  },
-  "credit-ack": {
-    tableTitle: "Accusés de crédit",
-    columns: ["Référence AC", "Agence", "Date", "Montant", "Objet", "Statut"],
-    formTitle: "Demande d'accusé de crédit",
-    fields: ["Agence", "Période", "Objet", "Montant", "Justificatifs", "Validateur"],
-    documentTitle: "Gabarit accusé de crédit",
-    documentLines: ["Agence", "Situation comptable", "Encaisse", "Montant", "Validation"],
-    workflowTitle: "Production AC",
-    workflowSteps: ["Calcul validé", "Vérification", "Génération", "Signature", "Archivage"]
-  },
-  products: {
-    tableTitle: "Produits et services",
-    columns: ["Code", "Libellé", "Famille", "Tarif", "Compte proposé", "Statut"],
-    formTitle: "Fiche produit/service",
-    fields: ["Code", "Libellé", "Famille", "Tarif", "Règle comptable", "Statut"],
-    documentTitle: "Référentiel produits",
-    documentLines: ["Produit", "Tarif", "Comptabilisation", "Retrait sans suppression", "Historique"],
-    workflowTitle: "Gestion référentiel",
-    workflowSteps: ["Proposer", "Valider", "Activer", "Retirer de l'interface", "Conserver historique"]
-  },
-  "postal-values": {
-    tableTitle: "Valeurs postales",
-    columns: ["Type VP", "Agence", "Stock", "Seuil", "Statut", "Dernier mouvement"],
-    formTitle: "Activation valeur postale",
-    fields: ["Type VP", "Agence", "Stock initial", "Seuil", "Justificatif", "Statut"],
-    documentTitle: "Situation stock VP",
-    documentLines: ["Type", "Stock", "Entrées", "Sorties", "Écart", "Validation"],
-    workflowTitle: "Cycle VP",
-    workflowSteps: ["Référentiel", "Initialisation", "Mouvement", "Inventaire", "Rapprochement"]
-  },
-  "pcop-accounting": {
-    tableTitle: "Objets comptables configurables",
-    columns: ["Objet", "Statut", "Source", "Validation requise", "Utilisation"],
-    formTitle: "Référence comptable",
-    fields: ["Référentiel", "Version", "Source", "Statut", "Validateur", "Note"],
-    documentTitle: "Schéma comptable proposé",
-    documentLines: ["Référentiel PCOP 2006 à confirmer", "Journal proposé", "Débit proposé", "Crédit proposé", "Validation PAOMA"],
-    workflowTitle: "Publication d'écriture",
-    workflowSteps: ["Règle proposed", "Validation PAOMA", "Compte actif", "Débit = crédit", "Postage", "Contrepassation si correction"]
-  },
-  "paoma-clarifications": {
-    tableTitle: "Décisions attendues",
-    columns: ["Point", "Responsable", "Document attendu", "Risque", "Statut"],
-    formTitle: "Fiche de clarification",
-    fields: ["Sujet", "Question", "Impact", "Hypothèse KCI", "Décision PAOMA"],
-    documentTitle: "Compte-rendu de clarification",
-    documentLines: ["Décision", "Responsable", "Date", "Impacts front/back/API/base", "Pièces associées"],
-    workflowTitle: "Traitement d'une clarification",
-    workflowSteps: ["Identifier", "Documenter", "Valider PAOMA", "Mettre à jour matrice", "Implémenter"]
-  }
-};
-
-const defaultOperationsBlueprint: DemoBlueprint = {
-  tableTitle: "Registre prévu",
-  columns: ["Référence", "Date", "Agence", "Type", "Montant", "Statut", "Audit"],
-  formTitle: "Formulaire prévu",
-  fields: ["Agence", "Date", "Type", "Montant", "Pièce justificative", "Commentaire", "Statut"],
-  documentTitle: "Gabarit document vide",
-  documentLines: ["En-tête", "Référence", "Données opération", "Validation", "Mentions et signatures"],
-  workflowTitle: "Workflow à valider",
-  workflowSteps: ["Saisie", "Contrôle", "Validation", "Audit", "Export"]
-};
-
-function getOperationsBlueprint(screen: DemoScreen) {
-  return operationsBlueprints[screen.id] ?? defaultOperationsBlueprint;
-}
-
-const demoScreens: DemoScreen[] = [
-  {
-    id: "dashboard",
-    label: "Tableau de bord",
-    title: "Tableau de bord Opérations",
-    dao: "Vue d'ensemble, consolidation, anomalies, mises à disposition et documents mensuels",
-    status: "vide",
-    api: "Agrégats réels à définir",
-    missing: "Modèles, seuils, calculs et données validées"
-  },
-  {
-    id: "agencies",
-    label: "Agences",
-    title: "Agences",
-    dao: "Gestion, consultation, ouverture, fermeture, rattachement et paramètres agence",
-    status: "partiel",
-    api: "/api/v1/operations/agencies",
-    missing: "Codiques, seuils, profils et référentiels validés"
-  },
-  {
-    id: "my-agency",
-    label: "Mon agence",
-    title: "Mon agence",
-    dao: "Gestion des opérations dans une agence",
-    status: "vide",
-    api: "/api/v1/operations/agencies",
-    missing: "Rattachement utilisateur/agence et profils"
-  },
-  {
-    id: "day-situation",
-    label: "Situation du jour",
-    title: "Situation du jour",
-    dao: "Situation comptable et encaisses d'une agence",
-    status: "bloqué",
-    api: "À définir",
-    missing: "Règles comptables, journée et caisse"
-  },
-  {
-    id: "agency-wallet",
-    label: "Portefeuille agence",
-    title: "Gestion portefeuille agence",
-    dao: "Initialisation portefeuille, report numéraire, ME, encaisses et stock VP",
-    status: "vide",
-    api: "À définir",
-    missing: "Règles de portefeuille, valeurs postales et référentiels"
-  },
-  {
-    id: "open-agency",
-    label: "Ouverture agence",
-    title: "Ouverture agence",
-    dao: "Ouverture agence et paramétrage max autorisé, numéraire, VP, ME, codique, zone et rattachement",
-    status: "partiel",
-    api: "/api/v1/operations/agencies",
-    missing: "Codique, profils et référentiels validés"
-  },
-  {
-    id: "close-agency",
-    label: "Fermeture agence",
-    title: "Fermeture agence",
-    dao: "Fermeture agence, transfert des valeurs, rapatriement ou réintégration",
-    status: "partiel",
-    api: "/api/v1/operations/agencies/:id/close",
-    missing: "Séquence métier et habilitations"
-  },
-  {
-    id: "management-cut",
-    label: "Coupure de gestion",
-    title: "Coupure de gestion",
-    dao: "Coupure de gestion",
-    status: "vide",
-    api: "À définir",
-    missing: "Définition opérationnelle de la coupure"
-  },
-  {
-    id: "inter-agencies",
-    label: "Inter-agences",
-    title: "Opérations inter-agences",
-    dao: "Opérations entre agences, historiques et notifications",
-    status: "vide",
-    api: "À définir",
-    missing: "Règles de transfert et validation"
-  },
-  {
-    id: "fund-requests",
-    label: "Demandes de valeurs",
-    title: "Demande de fonds / demande de valeurs",
-    dao: "Demandes de valeurs, notifications et versements/rapatriements",
-    status: "vide",
-    api: "À définir",
-    missing: "Seuils, destinataires et autorisations"
-  },
-  {
-    id: "remittances",
-    label: "Versements",
-    title: "Versements / rapatriements",
-    dao: "Versements, rapatriements et réintégration",
-    status: "vide",
-    api: "À définir",
-    missing: "Règles comptables et justificatifs"
-  },
-  {
-    id: "attachments",
-    label: "Pièces justificatives",
-    title: "Pièces justificatives",
-    dao: "Téléversement images pièces justificatives G59-G60",
-    status: "vide",
-    api: "À définir",
-    missing: "Formats, conservation, contrôle et sécurité fichier"
-  },
-  {
-    id: "counters",
-    label: "Guichets et caisses",
-    title: "Guichets et caisses",
-    dao: "300 agences, 1500 caisses et opérations effectuées à la caisse",
-    status: "vide",
-    api: "À définir",
-    missing: "Référentiel caisses et règles de guichet"
-  },
-  {
-    id: "open-cashdesk",
-    label: "Ouverture caisse",
-    title: "Ouverture de caisse",
-    dao: "Opérations effectuées à la caisse et encaisse",
-    status: "bloqué",
-    api: "À définir",
-    missing: "Procédure d'ouverture et règles de numéraire"
-  },
-  {
-    id: "cash-operations",
-    label: "Opérations caisse",
-    title: "Opérations caisse",
-    dao: "Registre recettes/dépenses, tickets, levées et situation des envois",
-    status: "bloqué",
-    api: "À définir",
-    missing: "Produits, services, règles comptables et privilèges"
-  },
-  {
-    id: "close-cashdesk",
-    label: "Fermeture caisse",
-    title: "Fermeture de caisse",
-    dao: "Validation journée et opérations non modifiables après validation",
-    status: "bloqué",
-    api: "À définir",
-    missing: "Règles de fermeture et délégations"
-  },
-  {
-    id: "daily-validation",
-    label: "Validation journalière",
-    title: "Validation journalière",
-    dao: "Validation journée uniquement par Chef d'Agence",
-    status: "bloqué",
-    api: "À définir",
-    missing: "Profil exact Chef d'Agence et suppléance"
-  },
-  {
-    id: "verification",
-    label: "Vérification",
-    title: "Vérification",
-    dao: "Résultat de vérification au fur et à mesure, déficit ou excédent",
-    status: "vide",
-    api: "À définir",
-    missing: "Traitement des écarts et responsabilités"
-  },
-  {
-    id: "credit-ack",
-    label: "Accusés de crédit",
-    title: "Accusés de crédit",
-    dao: "Accusé de crédit",
-    status: "vide",
-    api: "À définir",
-    missing: "Modèle officiel et workflow"
-  },
-  {
-    id: "fund-availability",
-    label: "Mise à disposition",
-    title: "Mise à disposition de fonds",
-    dao: "Mise à disposition de fonds",
-    status: "vide",
-    api: "À définir",
-    missing: "Autorisations et règles comptables"
-  },
-  {
-    id: "reporting",
-    label: "Reporting",
-    title: "Reporting",
-    dao: "Exports CSV/Excel/PDF, CA, produit/région, performance et anomalies",
-    status: "vide",
-    api: "À définir",
-    missing: "Données réelles, modèles, seuils et calculs"
-  },
-  {
-    id: "products",
-    label: "Produits & services",
-    title: "Produits & services",
-    dao: "Nouveaux produits/services et retrait sans suppression en base",
-    status: "vide",
-    api: "À définir",
-    missing: "Référentiel, tarifs et modes de comptabilisation"
-  },
-  {
-    id: "postal-values",
-    label: "Valeurs postales",
-    title: "Valeurs postales",
-    dao: "Valeurs postales et activation types VP",
-    status: "vide",
-    api: "À définir",
-    missing: "Types VP et règles de stock"
-  },
-  {
-    id: "settings",
-    label: "Paramètres",
-    title: "Paramètres",
-    dao: "Agences, pièces, registres, articles, règles comptables, calendriers",
-    status: "vide",
-    api: "À définir",
-    missing: "Référentiels validés"
-  },
-  {
-    id: "users",
-    label: "Utilisateurs",
-    title: "Utilisateurs / profils / habilitations",
-    dao: "Utilisateurs, profils, rattachements et habilitations",
-    status: "bloqué",
-    api: "/api/v1/platform/users",
-    missing: "Matrice contractuelle des rôles et périmètres"
-  },
-  {
-    id: "audit",
-    label: "Audit",
-    title: "Audit",
-    dao: "Piste d'audit complète et inaltérable",
-    status: "partiel",
-    api: "/api/v1/platform/audit-events",
-    missing: "Écran d'administration et droits finaux"
-  },
-  {
-    id: "pcop-accounting",
-    label: "Cadrage PCOP 2006",
-    title: "Cadrage comptable PCOP 2006",
-    dao: "Comptabilité publique proposée pour cadrer agences, caisses, valeurs, transferts et régularisations",
-    status: "proposition",
-    api: "Tables accounting configurables",
-    missing: "Référentiel, comptes, journaux et schémas validés par PAOMA",
-    message: "Schéma comptable proposé sur base PCOP 2006 — à valider par PAOMA. Aucune écriture réelle n'est générée depuis une règle proposée.",
-    details: pcopDetails
-  },
-  {
-    id: "paoma-clarifications",
-    label: "Points à clarifier",
-    title: "Points à clarifier avec PAOMA",
-    dao: "Décisions indispensables avant activation des modules métier",
-    status: "bloqué",
-    api: "Sans objet",
-    missing: "Décisions PAOMA",
-    message: "Je ne peux pas traiter cette partie car l'information requise est absente des données fournies.",
-    details: paomaClarifications
-  }
-];
 
 export function App() {
   const auth = useAuth();
@@ -635,7 +107,7 @@ export function App() {
     <AppShell title="Gestion des opérations">
       {DEMO_MODE && (
         <div className="demo-banner">
-          MODE PRÉSENTATION — MODULES CONNECTÉS API UNIQUEMENT — AUCUNE DONNÉE MÉTIER FICTIVE
+          MODE PRÉSENTATION — DONNÉES NON CONTRACTUELLES
         </div>
       )}
       <AgenciesWorkspace />
@@ -643,213 +115,6 @@ export function App() {
   );
 }
 
-function OperationsDemoWorkspace() {
-  const firstScreen = demoScreens[0]!;
-  const [activeId, setActiveId] = useState(firstScreen.id);
-  const active = demoScreens.find((screen) => screen.id === activeId) ?? firstScreen;
-  const blueprint = getOperationsBlueprint(active);
-
-  return (
-    <>
-      <div className="demo-banner">DÉMONSTRATION PROVISOIRE — CONFORME DAO — DONNÉES MÉTIER À VALIDER</div>
-      <div className="presentation-layout">
-        <nav className="side-menu" aria-label="Écrans de démonstration Opérations">
-          {demoScreens.map((screen) => (
-            <button
-              className={screen.id === active.id ? "active" : ""}
-              key={screen.id}
-              onClick={() => setActiveId(screen.id)}
-              type="button"
-            >
-              {screen.label}
-            </button>
-          ))}
-        </nav>
-        <section className="demo-main">
-          <p className="breadcrumb">Lot 2 / Opérations / {active.label}</p>
-          <div className="panel">
-            <div className="demo-title">
-              <div>
-                <p className="eyebrow">PAOSITRA MALAGASY</p>
-                <h2>{active.title}</h2>
-                <p className="muted">{active.dao}</p>
-              </div>
-              <span className={`badge ${active.status === "bloqué" || active.status === "proposition" ? "warning" : ""}`}>
-                {active.status}
-              </span>
-            </div>
-            <Message type="info">
-              {active.message ??
-                "Aucune donnée réelle disponible pour cette démonstration. Aucun chiffre d'affaires, stock VP, déficit, excédent ou mouvement de caisse n'est simulé."}
-            </Message>
-            <div className="kpi-grid">
-              <div className="kpi-card">
-                <span>Données réelles chargées</span>
-                <strong>0</strong>
-                <small>Démo sans données métier</small>
-              </div>
-              <div className="kpi-card">
-                <span>Actions activées</span>
-                <strong>—</strong>
-                <small>Après validation Paositra</small>
-              </div>
-              <div className="kpi-card">
-                <span>Règles métier</span>
-                <strong>—</strong>
-                <small>À clarifier</small>
-              </div>
-            </div>
-            <div className="empty-state">
-              <strong>État vide réel</strong>
-              <span>Aucun enregistrement réel n'est présent pour cet écran.</span>
-              <span>API prévue : {active.api}</span>
-              <span>Blocage : {active.missing}</span>
-            </div>
-            <DemoPreview blueprint={blueprint} screen={active} />
-            {active.details && (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Sujet</th>
-                      <th>Ce qui manque</th>
-                      <th>Risque</th>
-                      <th>Hypothèse KCI</th>
-                      <th>À confirmer</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {active.details.map((item) => (
-                      <tr key={item.subject}>
-                        <td>{item.subject}</td>
-                        <td>{item.missing}</td>
-                        <td>{item.risk}</td>
-                        <td>{item.hypothesis}</td>
-                        <td>{item.expected}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </>
-  );
-}
-
-function DemoPreview({
-  blueprint,
-  screen
-}: {
-  blueprint: DemoBlueprint;
-  screen: DemoScreen;
-}) {
-  return (
-    <div className="module-demo">
-      <section className="capability-board" aria-label="Lecture métier de l'écran">
-        <article>
-          <h3>Visible aujourd'hui</h3>
-          <ul>
-            <li>{blueprint.tableTitle}</li>
-            <li>{blueprint.formTitle}</li>
-            <li>{blueprint.documentTitle}</li>
-            <li>État vide réel sans agence, caisse, stock ou opération inventés</li>
-          </ul>
-        </article>
-        <article>
-          <h3>Demandé par le DAO</h3>
-          <ul>
-            <li>{screen.dao}</li>
-            <li>Registre, saisie, historique, contrôles et export selon le module</li>
-            <li>{blueprint.workflowTitle}</li>
-          </ul>
-        </article>
-        <article>
-          <h3>À valider PAOMA</h3>
-          <ul>
-            <li>{screen.missing}</li>
-            <li>Activation API : {screen.api}</li>
-            <li>Aucun traitement métier définitif sans validation</li>
-          </ul>
-        </article>
-      </section>
-
-      <section className="demo-preview module-surface" aria-labelledby={`${screen.id}-surface`}>
-        <div className="surface-heading">
-          <div>
-            <h3 id={`${screen.id}-surface`}>{blueprint.tableTitle}</h3>
-            <p className="muted">Les colonnes et champs montrent le périmètre attendu, sans créer de donnée métier.</p>
-          </div>
-          <span className="badge warning">modèle à valider</span>
-        </div>
-        <div className="surface-grid">
-          <div className="surface-block wide">
-            <h4>{blueprint.tableTitle}</h4>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {blueprint.columns.map((column) => (
-                      <th key={column}>{column}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan={blueprint.columns.length} className="empty-row">
-                      Aucune donnée réelle disponible. Le tableau montre uniquement la structure attendue.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="surface-block">
-            <h4>{blueprint.formTitle}</h4>
-            <div className="form-skeleton compact">
-              {blueprint.fields.map((field) => (
-                <label key={field}>
-                  {field}
-                  <input disabled placeholder="À valider PAOMA" />
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="surface-block document-preview">
-            <h4>{blueprint.documentTitle}</h4>
-            <div className="document-sheet compact">
-              <div>
-                <strong>PAOSITRA MALAGASY</strong>
-                <span>DÉMO — NON CONTRACTUEL</span>
-              </div>
-              {blueprint.documentLines.map((line) => (
-                <p key={line}>
-                  <span>{line}</span>
-                  <em>À compléter après validation</em>
-                </p>
-              ))}
-            </div>
-          </div>
-          <div className="surface-block">
-            <h4>{blueprint.workflowTitle}</h4>
-            <ol className="workflow-list">
-              {blueprint.workflowSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-            <div className="contract-panel">
-              <strong>Front / back / audit</strong>
-              <span>Route ou API prévue : {screen.api}</span>
-              <span>Condition d'activation : {screen.missing}</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
 
 function sourceBadgeClass(sourceType?: string) {
   if (sourceType === "paoma_validated") return "badge source-validated";
@@ -859,15 +124,15 @@ function sourceBadgeClass(sourceType?: string) {
 }
 
 function sourceBadgeLabel(sourceType?: string) {
-  if (sourceType === "paoma_validated") return "Données réelles PAOMA";
+  if (sourceType === "paoma_validated") return "Validé PAOSITRA";
   if (sourceType === "public_source") return "Sources publiques";
-  if (sourceType === "demo_only") return "Démonstration";
-  return "À valider";
+  if (sourceType === "demo_only") return "Démonstration non contractuelle";
+  return "À confirmer PAOSITRA";
 }
 
 function AgenciesWorkspace() {
   const auth = useAuth();
-  const [tab, setTab] = useState<"agencies" | "referentiel" | "roles" | "clarifications" | "users" | "audit">("agencies");
+  const [tab, setTab] = useState<OperationsTab>("agencies");
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [roles, setRoles] = useState<RbacRole[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -879,13 +144,30 @@ function AgenciesWorkspace() {
   const [filterValidation, setFilterValidation] = useState("");
   const [filterRegion, setFilterRegion] = useState("");
   const [filterType, setFilterType] = useState("");
+  const isCashierOnly =
+    auth.hasPermission("operations:counters:read") &&
+    auth.hasPermission("operations:cash:open") &&
+    !auth.hasPermission("operations:agencies:write") &&
+    !auth.hasPermission("operations:agencies:validate") &&
+    !auth.hasPermission("operations:dashboard:read") &&
+    !auth.hasPermission("operations:verification:read");
+  const canSeeClarifications = [
+    "demo.admin@paositra-demo.mg",
+    "demo.admin@paositra.local"
+  ].includes(auth.user?.email ?? "");
+  const hasTreasuryScopeOnly =
+    Boolean(auth.user?.permissions.some((permission) => permission.code.startsWith("treasury:"))) &&
+    !auth.hasPermission("operations:counters:read") &&
+    !auth.hasPermission("operations:agencies:read") &&
+    !auth.hasPermission("operations:dashboard:read") &&
+    !auth.hasPermission("operations:verification:read");
 
   const load = useCallback(async () => {
     try {
       const [agencyResult, auditResult, rolesResult] = await Promise.all([
         auth.hasPermission("operations:agencies:read")
           ? apiRequest<Paged<Agency>>(
-              "/api/v1/operations/agencies?pageSize=200",
+              "/api/v1/operations/agencies?pageSize=100",
               { token: auth.token }
             )
           : Promise.resolve({ items: [], total: 0 }),
@@ -909,6 +191,27 @@ function AgenciesWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visibleTabs: Array<{ id: OperationsTab; label: string }> = [
+    auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "agencies", label: "Agences" },
+    auth.hasPermission("operations:counters:read") && { id: "caisses", label: "Caisses" },
+    auth.hasPermission("operations:verification:read") && { id: "verification", label: "Vérification" },
+    auth.hasPermission("operations:dashboard:read") && { id: "opsdashboard", label: "Tableau de bord" },
+    auth.hasPermission("operations:transfers:read") && { id: "valeurs", label: "Inter-agences" },
+    auth.hasPermission("platform:notifications:read") && { id: "alertes", label: "Alertes" },
+    auth.hasPermission("operations:agencies:read") && !isCashierOnly && { id: "referentiel", label: "Référentiel agences" },
+    auth.hasPermission("platform:roles:read") && { id: "roles", label: "Rôles & habilitations" },
+    canSeeClarifications && { id: "clarifications", label: "Parcours à cadrer" },
+    auth.hasPermission("platform:users:manage") && { id: "users", label: "Utilisateurs" },
+    auth.hasPermission("platform:audit:read") && { id: "audit", label: "Audit" }
+  ].filter(Boolean) as Array<{ id: OperationsTab; label: string }>;
+  const canSeeCurrentTab = visibleTabs.some((item) => item.id === tab);
+
+  useEffect(() => {
+    if (!canSeeCurrentTab && visibleTabs[0]) {
+      setTab(visibleTabs[0].id);
+    }
+  }, [auth.user, canSeeCurrentTab, tab, visibleTabs]);
 
   async function createAgency(event: FormEvent) {
     event.preventDefault();
@@ -982,63 +285,64 @@ function AgenciesWorkspace() {
 
   return (
     <>
-      <section className="panel module-home">
+      {!isCashierOnly && visibleTabs.length > 0 && <section className="panel module-home">
         <div>
           <p className="eyebrow">LOT 2 — OPÉRATIONS</p>
-          <h2>Module agences opérationnel connecté au backend</h2>
-          <p className="muted">
-            Cette vue affiche uniquement les fonctions réellement reliées à l'API, aux permissions et à l'audit.
-            Les caisses, valeurs postales, G59/G60, AC et workflows non couverts par une route backend ne sont pas simulés.
-          </p>
+          <h2>Module agences opérationnel</h2>
         </div>
         <div className="kpi-grid">
           <div className="kpi-card">
             <span>Agences dans le référentiel</span>
             <strong>{agencies.length}</strong>
-            <small>Données lues depuis /api/v1/operations/agencies</small>
+            <small>Données issues du référentiel agences chargé dans la démonstration. Les codiques officiels restent à confirmer par PAOSITRA.</small>
             {agencies.some((a) => a.sourceType === "demo_only") && (
-              <small className="source-note">Dont données de démonstration (demo_only)</small>
+              <small className="source-note">Certaines lignes sont des données de démonstration non contractuelles.</small>
             )}
           </div>
           <div className="kpi-card">
-            <span>Agences validées PAOMA</span>
+            <span>Agences validées PAOSITRA</span>
             <strong>{agencies.filter((a) => a.validationStatus === "validated").length}</strong>
-            <small>Source paoma_validated uniquement</small>
+            <small>Agences officiellement validées par PAOSITRA. À ce stade, aucune validation officielle ne doit être supposée sans confirmation.</small>
           </div>
           <div className="kpi-card">
             <span>Rôles proposés</span>
             <strong>{roles.length}</strong>
-            <small>Proposition KCI — à valider PAOMA</small>
+            <small>Rôles de travail proposés pour organiser la démonstration. Ils devront être validés ou corrigés par PAOSITRA avant production.</small>
           </div>
           <div className="kpi-card">
             <span>Audit consultable</span>
             <strong>{auditEvents.length}</strong>
-            <small>Derniers événements chargés depuis l'API</small>
+            <small>Dernières actions enregistrées dans la piste d'audit de la démonstration.</small>
           </div>
         </div>
-      </section>
-      <nav className="tabs" aria-label="Modules opérations">
-        <button className={tab === "agencies" ? "active" : ""} onClick={() => setTab("agencies")}>
-          Agences
-        </button>
-        <button className={tab === "referentiel" ? "active" : ""} onClick={() => setTab("referentiel")}>
-          Référentiel agences
-        </button>
-        <button className={tab === "roles" ? "active" : ""} onClick={() => setTab("roles")}>
-          Rôles &amp; habilitations
-        </button>
-        <button className={tab === "clarifications" ? "active" : ""} onClick={() => setTab("clarifications")}>
-          Points à clarifier
-        </button>
-        <button className={tab === "users" ? "active" : ""} onClick={() => setTab("users")}>
-          Utilisateurs
-        </button>
-        <button className={tab === "audit" ? "active" : ""} onClick={() => setTab("audit")}>
-          Audit
-        </button>
+      </section>}
+      <nav className="tabs" aria-label="Modules operations">
+        {visibleTabs.map((item) => (
+          <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
       </nav>
       {message && <Message type={message.type}>{message.text}</Message>}
-      {tab === "referentiel" ? (
+      {visibleTabs.length === 0 ? (
+        <Message type="info">
+          {hasTreasuryScopeOnly
+            ? "Ce compte est limité au périmètre Trésorerie et comptabilité. Le référentiel agences relève du Lot 2."
+            : "Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre."}
+        </Message>
+      ) : !canSeeCurrentTab ? (
+        <Message type="info">Votre profil ne couvre pas ce module. Les informations affichées sont limitées à votre périmètre.</Message>
+      ) : tab === "caisses" ? (
+        <CashModule />
+      ) : tab === "verification" ? (
+        <VerificationModule />
+      ) : tab === "opsdashboard" ? (
+        <OpsDashboardModule />
+      ) : tab === "valeurs" ? (
+        <ValueRequestsModule />
+      ) : tab === "alertes" ? (
+        <AlertsPanel />
+      ) : tab === "referentiel" ? (
         <ReferentielAgences
           agencies={agencies}
           filterSource={filterSource}
@@ -1135,13 +439,13 @@ function AgenciesWorkspace() {
                 <input maxLength={240} value={form.parentOrgan} onChange={(e) => setForm({ ...form, parentOrgan: e.target.value })} />
               </label>
               <label>Maximum autorisé en numéraire
-                <input inputMode="decimal" value={form.cashMaxAmount} onChange={(e) => setForm({ ...form, cashMaxAmount: e.target.value })} />
+                <AmountInput value={form.cashMaxAmount} onValueChange={(value) => setForm({ ...form, cashMaxAmount: value })} />
               </label>
               <label>Maximum autorisé en valeurs postales
-                <input inputMode="decimal" value={form.postalValueMaxAmount} onChange={(e) => setForm({ ...form, postalValueMaxAmount: e.target.value })} />
+                <AmountInput value={form.postalValueMaxAmount} onValueChange={(value) => setForm({ ...form, postalValueMaxAmount: value })} />
               </label>
               <label>Maximum autorisé en monnaie étrangère
-                <input inputMode="decimal" value={form.foreignCurrencyMaxAmount} onChange={(e) => setForm({ ...form, foreignCurrencyMaxAmount: e.target.value })} />
+                <AmountInput value={form.foreignCurrencyMaxAmount} onValueChange={(value) => setForm({ ...form, foreignCurrencyMaxAmount: value })} />
               </label>
               <label>Date de début de gestion du chef d'agence
                 <input type="date" value={form.managerManagementStartDate} onChange={(e) => setForm({ ...form, managerManagementStartDate: e.target.value })} />
@@ -1251,8 +555,8 @@ function ReferentielAgences({
     }
   }
 
-  async function handleExport() {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/operations/agencies/export`, {
+  async function handleExport(path: string, filename: string) {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}${path}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) { onError("Export échoué."); return; }
@@ -1260,7 +564,7 @@ function ReferentielAgences({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `agences-paoma-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -1270,32 +574,40 @@ function ReferentielAgences({
       <div className="demo-title">
         <div>
           <h2>Référentiel agences</h2>
-          <p className="muted">Données tracées par source — proposition à valider par PAOMA</p>
+          <p className="muted">Données classées par origine et statut de validation PAOSITRA.</p>
         </div>
         {canExport && (
-          <button className="secondary" type="button" onClick={() => void handleExport()}>
-            Export CSV
-          </button>
+          <div className="actions">
+            <button className="secondary" type="button" onClick={() => void handleExport("/api/v1/operations/agencies/export.xlsx", `referentiel-agences-${new Date().toISOString().slice(0, 10)}.xlsx`)}>
+              Export Excel
+            </button>
+            <button className="secondary" type="button" onClick={() => void handleExport("/api/v1/operations/agencies/export.pdf", `referentiel-agences-${new Date().toISOString().slice(0, 10)}.pdf`)}>
+              Export PDF
+            </button>
+            <button className="secondary" type="button" onClick={() => void handleExport("/api/v1/operations/agencies/export", `referentiel-agences-${new Date().toISOString().slice(0, 10)}.csv`)}>
+              CSV
+            </button>
+          </div>
         )}
       </div>
       <div className="demo-disclaimer">
         Les agences, codiques et données géographiques affichés sont soit issus de sources publiques, soit proposés à titre de cadrage.
-        Ils devront être validés officiellement par PAOMA avant toute utilisation en production.
+        Ils devront être validés officiellement par PAOSITRA avant toute utilisation en production.
       </div>
       <div className="source-counters">
-        <span className="source-counter"><span className="badge source-validated">{counts.paoma_validated}</span> Validées PAOMA</span>
+        <span className="source-counter"><span className="badge source-validated">{counts.paoma_validated}</span> Validées PAOSITRA</span>
         <span className="source-counter"><span className="badge source-public">{counts.public_source}</span> Sources publiques</span>
         <span className="source-counter"><span className="badge source-demo">{counts.demo_only}</span> Démonstration</span>
-        <span className="source-counter"><span className="badge source-unknown">{counts.to_validate}</span> À valider</span>
+        <span className="source-counter"><span className="badge source-unknown">{counts.to_validate}</span> À confirmer</span>
       </div>
       <div className="filter-bar">
         <label>Source
           <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
             <option value="">Toutes</option>
-            <option value="paoma_validated">Données réelles PAOMA</option>
+            <option value="paoma_validated">Validé PAOSITRA</option>
             <option value="public_source">Sources publiques</option>
-            <option value="demo_only">Démonstration</option>
-            <option value="to_validate">À valider</option>
+            <option value="demo_only">Démonstration non contractuelle</option>
+            <option value="to_validate">À confirmer</option>
           </select>
         </label>
         <label>Validation
@@ -1370,13 +682,22 @@ function ReferentielAgences({
 function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "lot2" | "all" }) {
   const filtered = lot === "all" ? roles : roles.filter((r) => r.lot === "common" || r.lot === lot);
   const byLot = (l: string) => filtered.filter((r) => r.lot === l);
+  const scopeLabel = (scope: string) =>
+    ({
+      global: "Toute la plateforme",
+      organ: "Organe",
+      direction: "Direction",
+      region: "Région",
+      agency: "Agence",
+      counter: "Caisse ou guichet"
+    })[scope] ?? scope;
 
   return (
     <section className="panel">
       <h2>Rôles &amp; habilitations</h2>
       <div className="roles-table-notice">
-        Proposition KCI — tous les rôles et périmètres listés sont des propositions à valider par PAOMA avant toute utilisation en production.
-        Le DAO reste la référence contractuelle.
+        Tous les rôles et périmètres listés sont des propositions à valider par PAOSITRA avant toute utilisation en production.
+        Le DAOO reste la référence prioritaire.
       </div>
       {(["common", "lot1", "lot2"] as const).map((l) => {
         const items = byLot(l);
@@ -1402,7 +723,7 @@ function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "
                     <tr key={role.code}>
                       <td><code>{role.code}</code></td>
                       <td>{role.label}</td>
-                      <td>{role.scopeType}</td>
+                      <td>{scopeLabel(role.scopeType)}</td>
                       <td>{role.description ?? "—"}</td>
                       <td><span className="badge warning">Proposition à valider</span></td>
                     </tr>
@@ -1420,84 +741,157 @@ function RolesHabilitations({ roles, lot }: { roles: RbacRole[]; lot: "lot1" | "
   );
 }
 
-const clarificationSections = [
+const clarificationSections: Array<{ num: number; title: string; statut: string; contenu: string[] }> = [
   {
     num: 1,
     title: "Codification des agences",
-    statut: "à clarifier",
-    contenu: "Le format du codique PAOMA (public_code, codique, temporary_code) n'est pas défini dans le DAO. La structure proposée (code public à 3 chiffres, codique interne) est une hypothèse à confirmer."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO demande la gestion des agences, mais ne fournit pas la liste officielle des agences ni leurs codiques. Pour la démonstration, KCI utilise un code provisoire afin d'identifier les agences sans prétendre qu'il s'agit du codique officiel PAOSITRA.",
+      "Exemple : TMP-PF-ANA-TNR-008. TMP signifie code temporaire de démonstration, PF indique la source provisoire utilisée pour la démo, ANA désigne Analamanga, TNR Antananarivo, et 008 un numéro séquentiel provisoire.",
+      "Proposition KCI : utiliser ces codes temporaires uniquement pour la démonstration, puis les remplacer par les codiques officiels fournis par PAOSITRA.",
+      "Attente PAOSITRA : fournir la liste officielle des agences, bureaux, guichets et codiques, idéalement en Excel ou CSV.",
+      "Risque si non confirmé : le système peut fonctionner techniquement, mais les agences ne pourront pas être considérées comme référentiel officiel."
+    ]
   },
   {
     num: 2,
     title: "Types d'agences et hiérarchie",
-    statut: "proposition à valider",
-    contenu: "Types proposés : direction, agence_principale, agence_secondaire, bureau, point_service, guichet_financier. Hiérarchie (direction > agence_principale > bureau) à valider avec PAOMA."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO évoque les agences, les caisses, les guichets et les opérations, mais ne précise pas toute la hiérarchie organisationnelle.",
+      "Proposition KCI : utiliser une structure direction > agence principale > agence secondaire ou bureau > guichet ou caisse, afin de gérer les filtres, rattachements, droits d'accès et rapports par niveau.",
+      "Attente PAOSITRA : confirmer la hiérarchie réelle : directions, régions, agences principales, bureaux rattachés, guichets et caisses.",
+      "Risque si non confirmé : les droits d'accès, rapports régionaux et rattachements des utilisateurs peuvent être mal alignés avec l'organisation réelle."
+    ]
   },
   {
     num: 3,
-    title: "Découpage géographique officiel",
-    statut: "à clarifier",
-    contenu: "Le DAO cite 300 agences et un découpage régional. La correspondance région/district/commune utilisée dans cette démo est issue des données publiques de Madagascar — à confirmer par PAOMA."
+    title: "Liste des guichets et caisses",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO demande la gestion des guichets, caisses et opérations de caisse, mais ne donne pas la liste des caisses par agence, ni le nombre de guichets, ni leur rattachement.",
+      "Proposition KCI : prévoir une structure où chaque caisse appartient à une agence, et où chaque caissier est rattaché à une caisse ou à un guichet.",
+      "Attente PAOSITRA : fournir pour chaque agence la liste des caisses, guichets, caissiers, plafonds et règles d'ouverture ou fermeture.",
+      "Risque si non confirmé : la démonstration peut montrer le parcours, mais l'exploitation réelle des caisses ne pourra pas être sécurisée."
+    ]
   },
   {
     num: 4,
-    title: "Workflows de validation agences",
-    statut: "à clarifier",
-    contenu: "Le workflow de validation (proposition > validation référentiel > ouverture > fermeture) est une proposition. Les acteurs, délais et documents requis doivent être fournis par PAOMA."
+    title: "Circuit de validation des agences",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Un circuit de validation signifie les étapes à suivre avant qu'une agence soit considérée comme officielle et utilisable dans le logiciel.",
+      "Proposition KCI : proposition > contrôle > validation référentiel > ouverture opérationnelle > modification contrôlée > fermeture ou suspension.",
+      "Attente PAOSITRA : indiquer qui peut proposer une agence, qui valide, quels documents sont nécessaires, quel délai est applicable et qui peut fermer ou suspendre une agence.",
+      "Risque si non confirmé : une agence pourrait être utilisée dans le système sans validation administrative correcte."
+    ]
   },
   {
     num: 5,
-    title: "Modèle RBAC (rôles, périmètres, délégations)",
-    statut: "proposition à valider",
-    contenu: "19 rôles candidats proposés. Les périmètres (global, organ, direction, agency, counter), délégations, incompatibilités et suppléances doivent être définis par PAOMA."
+    title: "Gestion des droits par rôle",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "La gestion des droits par rôle définit ce que chaque utilisateur peut voir ou faire. Un caissier peut saisir des opérations de caisse, mais ne doit pas créer un autre caissier. Un administrateur système peut créer les comptes, mais ne doit pas faire les opérations de caisse.",
+      "Les périmètres d'accès proposés sont : global, direction, région, agence, caisse ou guichet.",
+      "La délégation donne temporairement le droit d'agir à la place d'une autre personne. L'incompatibilité évite les conflits d'intérêt, par exemple saisir puis vérifier la même opération. La suppléance désigne un remplaçant officiel pendant une absence.",
+      "Proposition KCI : utiliser 19 rôles de démonstration, tous marqués à valider PAOSITRA.",
+      "Attente PAOSITRA : valider les rôles, droits, périmètres, incompatibilités et cas de remplacement.",
+      "Risque si non confirmé : des utilisateurs pourraient avoir trop de droits ou pas assez, ce qui crée un risque opérationnel et de contrôle interne."
+    ]
   },
   {
     num: 6,
-    title: "Règles comptables (PCOP 2006)",
-    statut: "à clarifier",
-    contenu: "Le référentiel PCOP 2006 est utilisé comme cadrage provisoire. PAOMA doit confirmer si PCOP 2006, PCG ou un référentiel hybride s'applique, et fournir les schémas débit/crédit par opération."
+    title: "Règles comptables et PCOP 2006",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le logiciel devra produire ou préparer des écritures comptables pour certaines opérations : caisse, versements, rapatriements, créances, placements, paiements, rapprochements, valeurs postales et régularisations.",
+      "Proposition KCI : utiliser le PCOP 2006 comme référentiel provisoire de comptabilité publique, avec une architecture configurable : comptes, journaux, écritures, lignes débit/crédit, périodes, contrepassations et validations.",
+      "Attente PAOSITRA : confirmer le référentiel applicable, fournir le plan de comptes, les journaux comptables, les schémas d'écriture par opération et les règles de correction.",
+      "Risque si non confirmé : le logiciel peut afficher les écrans, mais ne doit pas générer d'écritures comptables définitives."
+    ]
   },
   {
     num: 7,
     title: "Transactions financières postales",
-    statut: "à clarifier",
-    contenu: "Montants maximum autorisés (numéraire, VP, ME), devises acceptées, limites par guichet et règles de billetage doivent être fournis par PAOMA."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Les transactions financières postales concernent les opérations d'argent ou de valeurs réalisées dans les agences : espèces, valeurs postales, monnaie électronique, mandats, paiements, versements, rapatriements, avances et régularisations.",
+      "Termes à confirmer dans l'écran : numéraire, valeurs postales, monnaie électronique, billetage et plafond.",
+      "Proposition KCI : prévoir des plafonds paramétrables par agence, caisse, type d'opération et profil utilisateur.",
+      "Attente PAOSITRA : fournir les plafonds, devises acceptées, règles de billetage, limites par guichet, règles de contrôle et seuils d'alerte.",
+      "Risque si non confirmé : la caisse peut être démontrée, mais pas utilisée en production avec des montants réels."
+    ]
   },
   {
     num: 8,
-    title: "Interopérabilité Lot 1 / Lot 2",
-    statut: "à clarifier",
-    contenu: "Les flux entre Lot 1 (trésorerie) et Lot 2 (opérations agences) — virements, AC, rapatriements — nécessitent une définition contractuelle des interfaces."
+    title: "Relations entre Lot 1 Trésorerie et Lot 2 Opérations",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO distingue deux lots. KCI propose un socle technique commun pour la sécurité, les utilisateurs, l'audit, les sauvegardes et les API, mais les métiers restent séparés.",
+      "Le Lot 2 produit les opérations terrain : caisse, agence, guichets, versements, rapatriements, demandes de valeurs et accusés de crédit. Le Lot 1 suit les impacts financiers centraux : trésorerie, comptes, créances, placements, rapprochements, paiements et budget.",
+      "Proposition KCI : prévoir des interfaces internes entre les deux lots, sans figer les flux tant que PAOSITRA ne confirme pas les règles.",
+      "Attente PAOSITRA : indiquer quels flux passent du Lot 2 vers le Lot 1, à quel moment, avec quels documents, validations et formats.",
+      "Risque si non confirmé : les rapprochements entre opérations terrain et trésorerie centrale resteront incomplets."
+    ]
   },
   {
     num: 9,
-    title: "Gestion des incidents et audit",
+    title: "Incidents et piste d'audit",
     statut: "partiel",
-    contenu: "La piste d'audit est implémentée (trigger-protected). Les règles de conservation, accès et export des journaux d'audit doivent être validées par PAOMA."
+    contenu: [
+      "La piste d'audit garde la trace des actions importantes : connexion, échec de connexion, création, modification, validation, annulation, export, refus d'accès et changement de rôle.",
+      "La protection au niveau de la base signifie que les événements d'audit ne peuvent pas être modifiés ou supprimés par le compte applicatif normal.",
+      "Proposition KCI : conserver l'audit applicatif au moins 10 ans pour les actions métier sensibles, conserver les journaux techniques 12 mois, chiffrer les sauvegardes et limiter l'accès aux auditeurs autorisés.",
+      "Attente PAOSITRA : valider les durées de conservation, les profils autorisés, les formats d'export et les procédures d'archivage.",
+      "Risque si non confirmé : les traces existent, mais leur valeur administrative et leur durée de conservation ne seront pas officiellement cadrées."
+    ]
   },
   {
     num: 10,
-    title: "Processus de clôture d'agence",
+    title: "Clôture d'agence",
     statut: "partiel",
-    contenu: "La fermeture technique est implémentée. Le processus métier (transfert de valeurs, rapatriement, soldes, G59/G60, archivage) doit être fourni par PAOMA."
+    contenu: [
+      "La clôture d'agence signifie l'arrêt ou la fermeture opérationnelle d'une agence, temporaire ou définitive. Elle ne se limite pas à désactiver l'agence dans le logiciel.",
+      "Proposition KCI : demande de fermeture > inventaire des caisses et valeurs > contrôle des soldes > transfert ou rapatriement > téléversement des pièces > validation > archivage.",
+      "Attente PAOSITRA : fournir les modèles G59/G60, les documents obligatoires, les validateurs, les règles de transfert et les règles d'archivage.",
+      "Risque si non confirmé : on peut désactiver techniquement une agence, mais pas sécuriser sa fermeture administrative et financière."
+    ]
   },
   {
     num: 11,
-    title: "Reporting réglementaire",
-    statut: "absent",
-    contenu: "Les modèles de rapports officiels (formats, fréquences, destinataires) ne sont pas dans le DAO. PAOMA doit fournir les gabarits G59, G60 et les règles d'envoi."
+    title: "Modèles de rapports et documents",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le DAOO demande des rapports, exports, tickets, accusés de crédit, situations et documents de suivi. Les modèles officiels ne sont pas fournis.",
+      "Proposition KCI : créer des modèles provisoires clairement marqués démonstration non contractuelle, avec export PDF, Excel ou CSV.",
+      "Attente PAOSITRA : fournir les modèles officiels : en-têtes, signatures, champs obligatoires, numérotation, mentions légales, formats d'impression et règles de validation.",
+      "Risque si non confirmé : les exports peuvent servir à la démonstration, mais ne doivent pas être utilisés comme documents officiels."
+    ]
   },
   {
     num: 12,
-    title: "Intégration systèmes externes",
-    statut: "absent",
-    contenu: "Les intégrations BCM, banques, CCP, plateforme de paiement mobile ne sont pas couvertes. Les contrats d'interface (formats, protocoles, fréquences) sont à définir."
+    title: "Intégration avec systèmes externes",
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Une intégration externe signifie que le logiciel échange des données avec un autre système : banque, CCP, mobile money, BCM, plateforme interne, email, application partenaire ou système existant.",
+      "Un contrat d'échange de données décrit le format, les colonnes obligatoires, les identifiants, les règles d'erreur, les accusés de réception, la sécurité, la fréquence et les responsabilités.",
+      "Proposition KCI : prévoir des API et imports configurables, sans connecter réellement un système externe tant que les contrats d'échange ne sont pas validés.",
+      "Attente PAOSITRA : fournir les formats BCM, banques, CCP, paiement mobile, CPS, email ou autres systèmes partenaires.",
+      "Risque si non confirmé : les écrans peuvent être démontrés, mais les échanges automatiques avec les systèmes externes ne peuvent pas être fiabilisés."
+    ]
   },
   {
     num: 13,
     title: "Protection des données personnelles",
-    statut: "à clarifier",
-    contenu: "La législation applicable à Madagascar (loi n°2014-038 sur la protection des données) et les règles de conservation, accès et suppression doivent être intégrées."
+    statut: "à valider PAOSITRA",
+    contenu: [
+      "Le logiciel peut traiter des données personnelles : agents, utilisateurs, clients, bénéficiaires, pièces d'identité, contacts, opérations, traces de connexion et justificatifs.",
+      "Ces données doivent être protégées selon la législation applicable à Madagascar, notamment la loi n°2014-038 sur la protection des données personnelles, ainsi que les règles internes PAOSITRA.",
+      "Proposition KCI : prévoir des droits d'accès stricts, le masquage de certaines données sensibles, la journalisation des consultations, la limitation des exports, une conservation paramétrable et l'anonymisation selon règles validées.",
+      "Attente PAOSITRA : confirmer les données personnelles traitées, durées de conservation, profils autorisés, règles d'export et procédures de suppression ou d'archivage.",
+      "Risque si non confirmé : le logiciel pourrait être techniquement fonctionnel, mais non conforme aux obligations de protection des données."
+    ]
   }
 ];
 
@@ -1506,13 +900,13 @@ function PointsAClarifier({ lot }: { lot: "lot1" | "lot2" }) {
 
   return (
     <section className="panel">
-      <h2>Points à clarifier avec PAOMA</h2>
+      <h2>Parcours à cadrer avec PAOSITRA</h2>
       <p className="muted">
-        Ces points sont des blocages ou propositions identifiés lors de l'analyse du DAO {lot === "lot1" ? "Lot 1 (Trésorerie)" : "Lot 2 (Opérations)"}.
-        Ils ne peuvent pas être traités sans décision formelle de PAOMA.
+        Ces parcours représentent les fonctions à cadrer issues de l'analyse du DAO {lot === "lot1" ? "Lot 1 (Trésorerie)" : "Lot 2 (Opérations)"}.
+        Ils restent à valider formellement par PAOSITRA avant activation comme règles définitives.
       </p>
       <Message type="info">
-        Le DAO reste la référence contractuelle. Aucune de ces propositions n'est implémentée comme règle définitive.
+        Le DAOO n°26/005-PAOSITRA/DG/PRMP/AOO reste la référence prioritaire. Ces parcours de démonstration ne remplacent pas les règles définitives PAOSITRA.
       </Message>
       {clarificationSections.map((section) => (
         <div className="clarify-section" key={section.num}>
@@ -1530,7 +924,9 @@ function PointsAClarifier({ lot }: { lot: "lot1" | "lot2" }) {
           </div>
           {open === section.num && (
             <div className="clarify-section-body">
-              <p>{section.contenu}</p>
+              {section.contenu.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           )}
         </div>

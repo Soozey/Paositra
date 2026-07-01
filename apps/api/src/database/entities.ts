@@ -387,6 +387,9 @@ export class Agency {
   @Column({ type: "varchar", length: 100, nullable: true })
   city!: string | null;
 
+  @Column({ name: "historical_province", type: "varchar", length: 80, nullable: true })
+  historicalProvince!: string | null;
+
   @Column({ type: "text", nullable: true })
   address!: string | null;
 

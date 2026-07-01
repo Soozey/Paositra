@@ -3,33 +3,54 @@
 // Usage: MIGRATION_DATABASE_URL=postgres://... node scripts/seed-demo.mjs
 import pg from "pg";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
 const url = process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
+if (process.env.DEMO_MODE !== "true") throw new Error("DEMO_MODE=true requis pour charger les donnees de demonstration.");
+if (process.env.NODE_ENV === "production") throw new Error("Seed demo interdit avec NODE_ENV=production.");
 if (!url) throw new Error("MIGRATION_DATABASE_URL ou DATABASE_URL requis");
 const client = new pg.Client({ connectionString: url });
 
-const PW = "Demo@1234";
+const generatedPassword = `Demo-PAO-2026-${randomBytes(3).toString("hex").toUpperCase()}!`;
+const PW = process.env.DEMO_SEED_PASSWORD?.trim() || generatedPassword;
+if (PW.length < 12) throw new Error("DEMO_SEED_PASSWORD doit contenir au moins 12 caracteres.");
 const ADMIN = "00000000-0000-4000-a000-000000000001";
 
 const PERMS = {
   platform: ["platform:users:manage","platform:config:read","platform:config:manage","platform:audit:read","platform:roles:read","platform:roles:manage","platform:dashboard:read","platform:notifications:read","platform:agencies:validate"],
-  treasury: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export"],
-  operations: ["operations:agencies:read","operations:agencies:write","operations:agencies:validate","operations:agencies:export","operations:agencies:import","operations:agencies:close","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:transfers:manage","operations:reports:read","operations:reports:export","operations:dashboard:read"]
+  treasury: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export","treasury:budget:read","treasury:budget:manage","treasury:budget:validate","treasury:wallets:read","treasury:wallets:manage","treasury:imports:read","treasury:imports:manage","treasury:attachments:read","treasury:attachments:manage"],
+  operations: ["operations:agencies:read","operations:agencies:write","operations:agencies:validate","operations:agencies:export","operations:agencies:import","operations:agencies:close","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:transfers:manage","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:cash:open","operations:cash:operate","operations:cash:close","operations:day:validate","operations:verification:read","operations:verification:validate","operations:fund:manage"]
 };
 const ALL = [...PERMS.platform, ...PERMS.treasury, ...PERMS.operations];
+const SYSTEM_ADMIN_PERMISSIONS = [
+  ...PERMS.platform,
+  "operations:agencies:read",
+  "operations:agencies:write",
+  "operations:agencies:export",
+  "operations:agencies:import",
+  "operations:counters:read",
+  "operations:counters:manage",
+  "platform:notifications:read"
+];
 
 const ROLE_PERMS = {
-  ADMIN_SYSTEME: ALL,
-  DIRECTEUR_FINANCIER: ["treasury:institutions:read","treasury:institutions:validate","treasury:placements:read","treasury:placements:approve","treasury:placements:export","treasury:accounts:read","treasury:flows:read","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:export","platform:dashboard:read","platform:audit:read"],
-  TRESORIER_CHEF: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export"],
-  COMPTABLE: ["treasury:institutions:read","treasury:placements:read","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write"],
-  AUDITEUR_INTERNE: ["platform:audit:read","platform:dashboard:read","treasury:institutions:read","treasury:placements:read","treasury:placements:export","treasury:accounts:read","treasury:flows:read","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:export","operations:agencies:read","operations:counters:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read"],
-  DIRECTEUR_OPERATIONS: ["operations:agencies:read","operations:counters:read","operations:financial:read","operations:postal:read","operations:parcels:read","operations:transfers:read","operations:reports:read","operations:reports:export","operations:dashboard:read","platform:dashboard:read","platform:audit:read"],
-  CHEF_AGENCE: ["operations:agencies:read","operations:agencies:write","operations:agencies:validate","operations:agencies:close","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:transfers:manage","operations:reports:read","operations:reports:export","operations:dashboard:read"],
-  CAISSIER: ["operations:agencies:read","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read"],
-  VERIFICATEUR: ["operations:agencies:read","operations:counters:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read"],
-  COMPTABLE_SIEGE: ["operations:agencies:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read","treasury:accounts:read","treasury:reports:read"]
+  ADMIN_SYSTEME: SYSTEM_ADMIN_PERMISSIONS,
+  DIRECTEUR_FINANCIER: ["treasury:institutions:read","treasury:institutions:validate","treasury:placements:read","treasury:placements:approve","treasury:placements:export","treasury:accounts:read","treasury:flows:read","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:export","treasury:budget:read","treasury:budget:validate","platform:dashboard:read","platform:audit:read"],
+  TRESORIER_CHEF: ["treasury:institutions:read","treasury:institutions:write","treasury:institutions:validate","treasury:institutions:export","treasury:placements:read","treasury:placements:write","treasury:placements:approve","treasury:placements:cancel","treasury:placements:close","treasury:placements:export","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:receivables:export","treasury:budget:read","treasury:budget:manage","treasury:budget:validate"],
+  COMPTABLE: ["treasury:institutions:read","treasury:placements:read","treasury:accounts:read","treasury:accounts:manage","treasury:flows:read","treasury:flows:manage","treasury:reports:read","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:write","treasury:budget:read"],
+  AUDITEUR_INTERNE: ["platform:audit:read","platform:dashboard:read","treasury:institutions:read","treasury:placements:read","treasury:placements:export","treasury:accounts:read","treasury:flows:read","treasury:reports:read","treasury:reports:export","treasury:dashboard:read","treasury:receivables:read","treasury:receivables:export","treasury:budget:read","operations:agencies:read","operations:counters:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read"],
+  DIRECTEUR_OPERATIONS: ["operations:agencies:read","operations:counters:read","operations:financial:read","operations:postal:read","operations:parcels:read","operations:transfers:read","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:verification:read","platform:notifications:read","platform:dashboard:read","platform:audit:read"],
+  CHEF_AGENCE: ["operations:agencies:read","operations:agencies:write","operations:agencies:validate","operations:agencies:close","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:transfers:manage","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:day:validate","operations:verification:read","operations:fund:manage","platform:notifications:read"],
+  CAISSIER: ["operations:agencies:read","operations:counters:read","operations:counters:manage","operations:financial:read","operations:financial:manage","operations:postal:read","operations:postal:manage","operations:parcels:read","operations:parcels:manage","operations:transfers:read","operations:cash:open","operations:cash:operate","operations:cash:close"],
+  VERIFICATEUR: ["operations:agencies:read","operations:counters:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:verification:read","operations:verification:validate","platform:notifications:read"],
+  COMPTABLE_SIEGE: ["operations:agencies:read","operations:financial:read","operations:reports:read","operations:reports:export","operations:dashboard:read","operations:verification:read","operations:fund:manage","platform:notifications:read","treasury:accounts:read","treasury:reports:read"]
 };
+const TREASURY_EXTENDED_READ = ["treasury:wallets:read", "treasury:imports:read", "treasury:attachments:read"];
+const TREASURY_EXTENDED_MANAGE = ["treasury:wallets:manage", "treasury:imports:manage", "treasury:attachments:manage"];
+ROLE_PERMS.DIRECTEUR_FINANCIER.push(...TREASURY_EXTENDED_READ);
+ROLE_PERMS.TRESORIER_CHEF.push(...TREASURY_EXTENDED_READ, ...TREASURY_EXTENDED_MANAGE);
+ROLE_PERMS.COMPTABLE.push(...TREASURY_EXTENDED_READ, ...TREASURY_EXTENDED_MANAGE);
+ROLE_PERMS.AUDITEUR_INTERNE.push(...TREASURY_EXTENDED_READ);
 
 const USERS = [
   { id: ADMIN, email:"demo.admin@paositra-demo.mg", name:"[DEMO] Admin Système", role:"ADMIN_SYSTEME" },
@@ -102,6 +123,8 @@ try {
       [a.id, a.code, a.name, a.region, a.city, a.district, a.type, a.cash, ADMIN]
     );
   await client.query("COMMIT");
+  console.log("Mot de passe temporaire seed demo (affiche une seule fois):");
+  for (const user of USERS) console.log(`${user.email} | ${PW}`);
   console.log(`SEED OK: ${USERS.length} comptes démo, ${INSTITUTIONS.length} institutions, ${PLACEMENTS.length} placements, ${AGENCIES.length} agences.`);
 } catch (e) {
   await client.query("ROLLBACK");

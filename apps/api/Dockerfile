@@ -22,5 +22,6 @@ RUN npm ci --omit=dev
 COPY --from=build /app/apps/api/dist apps/api/dist
 COPY scripts scripts
 COPY database database
+COPY data data
 USER node
 CMD ["node", "apps/api/dist/main.js"]

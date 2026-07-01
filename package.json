@@ -17,7 +17,10 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:bootstrap-admin": "npm run bootstrap-admin -w @paositra/api",
     "openapi:generate": "npm run build -w @paositra/api && node apps/api/dist/scripts/generate-openapi.js",
-    "openapi:check": "node scripts/check-openapi.mjs"
+    "openapi:check": "node scripts/check-openapi.mjs",
+    "db:seed": "node scripts/seed-demo.mjs",
+    "db:seed:paoma": "node scripts/seed-paoma-complements.mjs",
+    "demo:reset-users": "node scripts/demo-reset-users.mjs"
   },
   "dependencies": {
     "pg": "8.16.0"

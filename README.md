@@ -15,7 +15,7 @@ du DAO ne doit pas être inventé.
 Le principe de non-invention s'applique au code, aux migrations, aux écrans,
 aux exports, aux tests et à la documentation.
 
-Aucune exigence n'est actuellement marquée `Implémenté`. La matrice active est
+Aucune exigence n'est actuellement déclarée couverte de bout en bout. La matrice active est
 [`docs/conformite-dao.md`](docs/conformite-dao.md).
 
 ## État du projet
@@ -126,6 +126,18 @@ docker compose -p paositra-jalon1 down -v
 Le mode `VITE_DEMO_MODE=true` active une présentation provisoire avec la
 bannière `DÉMONSTRATION PROVISOIRE — NON CONTRACTUELLE`. Il est désactivé par
 défaut dans `.env.example` et ne crée aucune donnée métier persistante.
+
+Les comptes locaux de présentation se régénèrent uniquement en mode démo :
+
+```powershell
+$env:DEMO_MODE="true"
+$env:MIGRATION_DATABASE_URL="postgresql://paositra_owner:<mot-de-passe>@localhost:55432/paositra"
+npm run demo:reset-users
+```
+
+Les mots de passe temporaires sont affichés en console une seule fois et ne
+sont pas stockés dans le dépôt. Les logins attendus sont documentés dans
+[`docs/comptes-demo.md`](docs/comptes-demo.md).
 
 ## Vérifications
 

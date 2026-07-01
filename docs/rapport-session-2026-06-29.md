@@ -42,7 +42,7 @@ Fichier : `apps/api/src/database/entities.ts`.
 
 ### Fondation démo (Étape 1)
 - `scripts/seed-demo.mjs` — seed **idempotent**, exécuté avec le rôle propriétaire.
-- **10 comptes démo** (mot de passe `Demo@1234`, haché bcrypt), permissions attribuées par rôle
+- **10 comptes démo** historiques (mots de passe à régénérer localement, hachés bcrypt), permissions attribuées par rôle
   dans `platform.user_permissions`.
 - Données **[DEMO]** : 3 institutions (BNI, BFV-SG, BOA), 2 placements MGA, 5 agences
   (Tana-Centre, Tana-Isotry, Antsirabe, Fianarantsoa, Toamasina), `source_type = demo_only`.
@@ -67,19 +67,18 @@ Le câblage **front → API → PostgreSQL** et le **RBAC (autorisation ET refus
 
 | E-mail | Mot de passe | Rôle | Lot |
 |---|---|---|---|
-| demo.admin@paositra-demo.mg | Demo@1234 | ADMIN_SYSTEME | — |
-| demo.daf@paositra-demo.mg | Demo@1234 | DIRECTEUR_FINANCIER | 1 |
-| demo.tresorier@paositra-demo.mg | Demo@1234 | TRESORIER_CHEF | 1 |
-| demo.comptable@paositra-demo.mg | Demo@1234 | COMPTABLE | 1 |
-| demo.auditeur@paositra-demo.mg | Demo@1234 | AUDITEUR_INTERNE | 1 |
-| demo.dop@paositra-demo.mg | Demo@1234 | DIRECTEUR_OPERATIONS | 2 |
-| demo.chef.tana@paositra-demo.mg | Demo@1234 | CHEF_AGENCE (Tana-Centre) | 2 |
-| demo.caissier1@paositra-demo.mg | Demo@1234 | CAISSIER (Tana-Centre) | 2 |
-| demo.verificateur@paositra-demo.mg | Demo@1234 | VERIFICATEUR | 2 |
-| demo.comptasieg@paositra-demo.mg | Demo@1234 | COMPTABLE_SIEGE | 2 |
+| demo.admin@paositra-demo.mg | Généré localement | ADMIN_SYSTEME | — |
+| demo.daf@paositra-demo.mg | Généré localement | DIRECTEUR_FINANCIER | 1 |
+| demo.tresorier@paositra-demo.mg | Généré localement | TRESORIER_CHEF | 1 |
+| demo.comptable@paositra-demo.mg | Généré localement | COMPTABLE | 1 |
+| demo.auditeur@paositra-demo.mg | Généré localement | AUDITEUR_INTERNE | 1 |
+| demo.dop@paositra-demo.mg | Généré localement | DIRECTEUR_OPERATIONS | 2 |
+| demo.chef.tana@paositra-demo.mg | Généré localement | CHEF_AGENCE (Tana-Centre) | 2 |
+| demo.caissier1@paositra-demo.mg | Généré localement | CAISSIER (Tana-Centre) | 2 |
+| demo.verificateur@paositra-demo.mg | Généré localement | VERIFICATEUR | 2 |
+| demo.comptasieg@paositra-demo.mg | Généré localement | COMPTABLE_SIEGE | 2 |
 
-> `Demo@1234` (9 caractères) est volontairement simple pour la démo ; la politique de mot de
-> passe (≥12 car.) ne s'applique qu'à l'inscription/changement, pas à la connexion.
+> Les mots de passe de démonstration doivent être régénérés localement et ne doivent pas être committés.
 
 ---
 

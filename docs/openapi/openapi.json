@@ -390,6 +390,250 @@
         }
       }
     },
+    "/api/v1/treasury/wallets": {
+      "get": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Liste des portefeuilles electroniques",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portefeuilles et soldes"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Creation d'un portefeuille electronique",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Portefeuille cree"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/wallets/{id}/entries": {
+      "get": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Mouvements d'un portefeuille",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mouvements controles"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Saisie d'un mouvement a valider",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Mouvement enregistre"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/wallets/entries/{id}/status": {
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Validation ou rejet d'un mouvement",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Statut modifie"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/bank-imports": {
+      "get": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Historique des imports bancaires",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lots importes"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/bank-imports/{accountId}": {
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Import CSV controle d'un releve bancaire",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Releve traite"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/budget/versions": {
+      "get": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Versions d'un exercice budgetaire",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versions budgetaires"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Creation ou copie d'une version budgetaire",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Version brouillon creee"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/budget/versions/{id}/activate": {
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Activation exclusive d'une version budgetaire",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Version activee"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/attachments/objects/{objectType}/{objectId}": {
+      "get": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Liste des pieces jointes d'un objet metier",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pieces jointes actives"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Depot securise d'une piece jointe",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Piece enregistree"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/attachments/file/{id}": {
+      "get": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Telechargement controle d'une piece jointe",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contenu du fichier"
+          }
+        }
+      }
+    },
+    "/api/v1/treasury/attachments/file/{id}/archive": {
+      "post": {
+        "tags": [
+          "Tresorerie"
+        ],
+        "summary": "Archivage logique d'une piece jointe",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Piece archivee"
+          }
+        }
+      }
+    },
     "/api/v1/operations/agencies": {
       "get": {
         "tags": [
